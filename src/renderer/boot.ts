@@ -40,6 +40,15 @@ export function boot(root: HTMLElement = document.body): void {
     onOpenDocument(id) {
       void editor.openDocument(id);
     },
+    onDocumentDeleted(nextId) {
+      if (nextId !== null) {
+        void editor.openDocument(nextId);
+        return;
+      }
+      // The last document is gone: give the editor a blank canvas so
+      // a deleted document's text cannot linger on screen.
+      editor.showBlank();
+    },
   });
   features.push(sidebar);
 

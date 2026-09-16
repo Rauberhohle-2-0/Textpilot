@@ -15,6 +15,7 @@ import {
   createDocumentRoutes,
   createFileDocumentStore,
 } from "./features/documents/index.ts";
+import { createFolderRoutes, createFileFolderStore } from "./features/folders/index.ts";
 import { requestLogger } from "./middleware/request-logger.ts";
 import { apiRoutes } from "./routes/api.ts";
 import { greetingRoutes } from "./routes/greeting.ts";
@@ -45,6 +46,15 @@ export function createApp({ logger }: CreateAppOptions = {}): Hono {
     "/api",
     createDocumentRoutes({
       store: createFileDocumentStore({ directory: appConfig.data.documents, logger }),
+      logger,
+    }),
+  );
+  app.route(
+    "/api",
+    createFolderRoutes({
+      store: createFileFolderStore({ path: appConfig.data.folders, logger }),
+      documentStore: createFileDocumentStore({ directory: appConfig.data.documents, logger }),
+      documentsDirectory: appConfig.data.documents,
       logger,
     }),
   );

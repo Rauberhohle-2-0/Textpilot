@@ -110,6 +110,34 @@ describe("documents api", () => {
     expect(big.status).toBe(413);
   });
 
+  test("PATCH with a title renames the document, surviving saves", async () => {
+    const { routes } = tempRoutes();
+    const created = (await (
+      await routes.request("/documents", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ text: "# Old name" }),
+      })
+    ).json()) as { id: string };
+
+    const renamed = await routes.request(`/documents/${created.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ title: "My custom name" }),
+    });
+    expect(renamed.status).toBe(200);
+    expect(((await renamed.json()) as { title: string }).title).toBe("My custom name");
+
+    // A later content save must not clobber the explicit title.
+    await routes.request(`/documents/${created.id}`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ text: "# New heading content" }),
+    });
+    const get = await routes.request(`/documents/${created.id}`);
+    expect(((await get.json()) as { title: string }).title).toBe("My custom name");
+  });
+
   test("documents persist as files that a new store instance reads", async () => {
     const directory = mkdtempSync(join(tmpdir(), "textpilot-docs-"));
     const first = createFileDocumentStore({ directory, logger });
@@ -119,6 +147,54 @@ describe("documents api", () => {
     const loaded = await second.load(created.id);
     expect(loaded.text).toBe("# Persisted\n");
     expect(readdirSync(directory).filter((name) => name.endsWith(".json"))).toHaveLength(1);
+  });
+
+  test("DELETE /api/documents/:id removes the document and its file", async () => {
+    const { routes, directory } = tempRoutes();
+    const created = (await (
+      await routes.request("/documents", { method: "POST" })
+    ).json()) as { id: string };
+
+    const del = await routes.request(`/documents/${created.id}`, { method: "DELETE" });
+    expect(del.status).toBe(204);
+
+    const get = await routes.request(`/documents/${created.id}`);
+    expect(get.status).toBe(404);
+    const list = await routes.request("/documents");
+    expect(((await list.json()) as { documents: unknown[] }).documents).toHaveLength(0);
+    expect(readdirSync(directory).filter((name) => name.endsWith(".json"))).toHaveLength(0);
+  });
+
+  test("DELETE /api/documents/:id 404s for a missing document", async () => {
+    const { routes } = tempRoutes();
+    const res = await routes.request("/documents/nope", { method: "DELETE" });
+    expect(res.status).toBe(404);
+  });
+
+  test("deleting one document leaves the others intact", async () => {
+    const { routes } = tempRoutes();
+    const a = (await (
+      await routes.request("/documents", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ text: "# A" }),
+      })
+    ).json()) as { id: string };
+    const b = (await (
+      await routes.request("/documents", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ text: "# B" }),
+      })
+    ).json()) as { id: string };
+
+    await routes.request(`/documents/${a.id}`, { method: "DELETE" });
+
+    const get = await routes.request(`/documents/${b.id}`);
+    expect(get.status).toBe(200);
+    const list = await routes.request("/documents");
+    const body = (await list.json()) as { documents: { id: string }[] };
+    expect(body.documents.map((d) => d.id)).toEqual([b.id]);
   });
 });
 

@@ -4,6 +4,7 @@ export { EditorStore } from "./store.ts";
 export type { EditorState } from "./store.ts";
 export {
   createDocument,
+  deleteDocument,
   listDocuments,
   loadDocument,
   saveDocument,

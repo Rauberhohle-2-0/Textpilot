@@ -49,12 +49,17 @@
   /* The sidebar: the Finder-style left rail. Slightly darker than the
      editor surface so the document reads as the lit part of the window,
      with the same accent the toolbar uses for selection. */
+  :root {
+    --sidebar-width: 13.5rem;
+  }
+
   .sidebar {
     flex: none;
-    width: 13.5rem;
+    width: var(--sidebar-width, 13.5rem);
     height: 100%;
     display: flex;
     flex-direction: column;
+    position: relative;
     /* The rail is the full window height - the traffic lights float
        over its top band - so the title bar and the sidebar blend into
        one surface instead of stacking as two strips. */
@@ -66,6 +71,133 @@
     -webkit-user-select: none;
   }
 
+  /* The scrollable body below the drag band; the band itself stays
+     fixed so the traffic lights keep their place at any height. */
+  .sidebar-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* The resize handle: an invisible strip on the rail's edge that
+     lights up on hover/drag, the way native separators do. */
+  .sidebar-resize-handle {
+    position: absolute;
+    top: 0;
+    right: -3px;
+    width: 7px;
+    height: 100%;
+    cursor: col-resize;
+    z-index: 30;
+    touch-action: none;
+  }
+
+  .sidebar-resize-handle::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 3px;
+    width: 1px;
+    height: 100%;
+    background: transparent;
+    transition: background 120ms ease;
+  }
+
+  .sidebar-resize-handle:hover::after,
+  body.sidebar-resizing .sidebar-resize-handle::after {
+    background: rgb(184 146 106 / 0.55);
+    width: 2px;
+    right: 2.5px;
+  }
+
+  /* While dragging: no text selection anywhere, and the cursor stays
+     col-resize even when the pointer outruns the handle. */
+  body.sidebar-resizing {
+    cursor: col-resize !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+  }
+
+  /* Hidden state: the rail collapses; the editor column (flex-1) fills
+     the window, and the status bar's left inset collapses with it. */
+  body.sidebar-hidden .sidebar {
+    display: none;
+  }
+
+  body.sidebar-hidden .status-bar {
+    left: 0;
+  }
+
+  /* The panel toggle: one button, one icon, fixed to the title-bar
+     row. Vertically centered on the traffic lights' band; the left
+     offset follows the rail with a comfortable gap, so it breathes
+     instead of gluing to the edge - and lands on the window edge when
+     the rail is hidden. Sized (1.6rem) and inset to sit exactly above
+     the new-document button: rail padding (0.6rem) + header padding
+     (0.3rem) put that button's right edge at
+     var(--sidebar-width) - 0.9rem, so left is width - 2.5rem here.
+     Keep in sync with .sidebar-header padding and .sidebar-new-button
+     size, or the two drift apart by a few pixels. */
+  .sidebar-toggle {
+    position: fixed;
+    top: calc((var(--vantail-titlebar-height, 36px) - 1.6rem) / 2);
+    left: calc(var(--sidebar-width, 13.5rem) - 2.5rem);
+    z-index: 40;
+    display: grid;
+    place-items: center;
+    width: 1.6rem;
+    height: 1.6rem;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #a8a8ad;
+    cursor: pointer;
+    transition: left 140ms ease;
+  }
+
+  body.sidebar-hidden .sidebar-toggle {
+    left: calc(var(--vantail-titlebar-inset-left, 0px) + 0.45rem);
+  }
+
+  /* New-document twin for the collapsed rail: the header's new buttons
+     disappear with the rail, so one ghost button rides beside the
+     toggle while the sidebar is hidden. Same square and icon metrics
+     as .sidebar-toggle so the pair reads as one control group. Two
+     class names: the doubled selector must outrank the base
+     .sidebar-new-button rule below, whose display:grid would
+     otherwise win (same specificity, later in the file) and keep the
+     twin visible even with the rail open. */
+  .sidebar-new-button.sidebar-new-button--hidden-rail {
+    position: fixed;
+    top: calc((var(--vantail-titlebar-height, 36px) - 1.6rem) / 2);
+    left: calc(var(--vantail-titlebar-inset-left, 0px) + 2.65rem);
+    z-index: 40;
+    display: none; /* shown only with the rail out of the way */
+  }
+
+  body.sidebar-hidden .sidebar-new-button--hidden-rail {
+    display: grid;
+  }
+
+  /* While the rail is being dragged, the toggle must track the edge
+     instantly - the hide/show glide is for clicks, not for a live
+     resize, where the easing reads as jitter. */
+  body.sidebar-resizing .sidebar-toggle {
+    transition: none;
+  }
+
+  .sidebar-toggle:hover {
+    background: rgb(255 255 255 / 0.08);
+    color: #e8e6e3;
+  }
+
+  .sidebar-toggle svg {
+    width: 1.05rem;
+    height: 1.05rem;
+  }
+
   /* The band the traffic lights float over: fixed height, non-scrolling
      (the section below scrolls), and empty so the runtime gets the
      press for window dragging - same contract as the titlebar-spacer. */
@@ -73,6 +205,7 @@
     flex: none;
     height: calc(var(--vantail-titlebar-height, 36px) + 0.4rem);
     margin: 0 -0.6rem; /* reach across the rail's side padding */
+    position: relative; /* anchors the new-document button */
     user-select: none;
     -webkit-user-select: none;
   }
@@ -87,35 +220,44 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.35rem 0.55rem 0.25rem;
+    gap: 0.35rem;
+    padding: 0.35rem 0.3rem 0.35rem 0.55rem;
   }
 
+  /* The header's right side: new-folder and new-document, a matched
+     pair in the panel toggle's ghost style. */
+  .sidebar-header-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+  }
+
+  /* The section title: larger than a Finder caption, so it reads as
+     the rail's heading rather than a footnote. */
   .sidebar-header-label {
-    font-size: 0.72rem;
+    font-size: 0.9rem;
     font-weight: 700;
     color: #8e8e93;
     letter-spacing: 0.01em;
   }
 
-  /* The new-document button: a quiet row under the header, in the
-     accent color, like Finder's toolbar actions. */
+  /* The new-document action: an icon-only ghost button in the
+     header's action pair. */
   .sidebar-new-button {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin: 0 0.25rem 0.35rem;
-    padding: 0.3rem 0.4rem;
+    display: grid;
+    place-items: center;
+    width: 1.6rem;
+    height: 1.6rem;
     border: 0;
     border-radius: 6px;
     background: transparent;
-    color: #d8b48c;
-    font-size: 0.8rem;
+    color: #a8a8ad;
     cursor: pointer;
-    text-align: left;
   }
 
   .sidebar-new-button:hover {
-    background: rgb(255 255 255 / 0.06);
+    background: rgb(255 255 255 / 0.08);
+    color: #e8e6e3;
   }
 
   .sidebar-new-button:disabled {
@@ -124,9 +266,8 @@
   }
 
   .sidebar-new-button svg {
-    width: 0.9rem;
-    height: 0.9rem;
-    flex: none;
+    width: 1.05rem;
+    height: 1.05rem;
   }
 
   .sidebar-list {
@@ -154,8 +295,108 @@
     text-align: left;
   }
 
+  /* The delete affordance: a small trash on the row's right, visible
+     on hover, in the destructive red. Hidden with display:none (not
+     just opacity) so it takes no layout space until needed - otherwise
+     the title is squeezed to a few characters, especially on folder
+     rows with three actions. */
+  .sidebar-delete-button {
+    display: none;
+    place-items: center;
+    flex: none;
+    width: 1.35rem;
+    height: 1.35rem;
+    margin-left: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    color: #8e8e93;
+    opacity: 0;
+    cursor: pointer;
+    transition: opacity 100ms ease, background 100ms ease;
+  }
+
+  .sidebar-row:hover .sidebar-delete-button,
+  .sidebar-delete-button:focus-visible {
+    display: grid;
+    opacity: 1;
+  }
+
+  .sidebar-delete-button:hover {
+    background: rgb(255 69 58 / 0.15);
+    color: #ff453a;
+  }
+
+  .sidebar-delete-button svg {
+    width: 0.85rem;
+    height: 0.85rem;
+  }
+
+  /* Per-folder quick actions: add document, add subfolder. Same slot
+     styling as the delete button; they sit to its left and appear on
+     row hover together. Hidden with display:none so the folder name
+     gets the full row width when the actions are not in use. */
+  .sidebar-row-action {
+    display: none;
+    place-items: center;
+    flex: none;
+    width: 1.35rem;
+    height: 1.35rem;
+    padding: 0;
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    color: #8e8e93;
+    opacity: 0;
+    cursor: pointer;
+    transition: opacity 100ms ease, background 100ms ease;
+  }
+
+  .sidebar-row:hover .sidebar-row-action,
+  .sidebar-row-action:focus-visible {
+    display: grid;
+    opacity: 1;
+  }
+
+  .sidebar-row-action:hover {
+    background: rgb(255 255 255 / 0.1);
+    color: #d8b48c;
+  }
+
+  .sidebar-row-action:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  .sidebar-row-action svg {
+    width: 0.85rem;
+    height: 0.85rem;
+  }
+
+  .sidebar-row--selected .sidebar-row-action {
+    color: #d8b48c;
+  }
+
+  .sidebar-row--selected .sidebar-delete-button {
+    color: #d8b48c;
+  }
+
+  .sidebar-row--selected .sidebar-delete-button:hover {
+    color: #ff453a;
+    background: rgb(255 69 58 / 0.15);
+  }
+
   .sidebar-row:hover {
     background: rgb(255 255 255 / 0.06);
+  }
+
+  /* Rows are divs with button semantics (real <button>s cannot nest
+     the row's inner controls), so keyboard focus needs an explicit
+     ring now that the native button outline is gone. */
+  .sidebar-row:focus-visible {
+    outline: 2px solid rgb(184 146 106 / 0.7);
+    outline-offset: -2px;
   }
 
   /* The selected row: the same warm accent the active toolbar button
@@ -177,10 +418,138 @@
     color: #a8a8ad;
   }
 
+  /* Folder rows: same rhythm as document rows, plus a chevron. */
+  .sidebar-row--folder .sidebar-icon {
+    color: #b8926a;
+  }
+
+  /* The disclosure chevron: a bare icon that rotates when collapsed.
+     It is part of the row button, so it toggles with the click too. */
+  .sidebar-chevron {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 1rem;
+    height: 1rem;
+    margin-left: -0.35rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #8e8e93;
+    cursor: pointer;
+    transition: transform 120ms ease;
+  }
+
+  .sidebar-chevron svg {
+    width: 0.8rem;
+    height: 0.8rem;
+  }
+
+  .sidebar-chevron--collapsed {
+    transform: rotate(0deg);
+  }
+
+  .sidebar-chevron:not(.sidebar-chevron--collapsed) {
+    transform: rotate(90deg);
+  }
+
+  /* The new-folder button: twin of the new-document button, on its
+     left in the header's action pair. */
+  .sidebar-new-folder-button {
+    display: grid;
+    place-items: center;
+    width: 1.6rem;
+    height: 1.6rem;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #a8a8ad;
+    cursor: pointer;
+  }
+
+  .sidebar-new-folder-button:hover {
+    background: rgb(255 255 255 / 0.08);
+    color: #e8e6e3;
+  }
+
+  .sidebar-new-folder-button:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  .sidebar-new-folder-button svg {
+    width: 1.05rem;
+    height: 1.05rem;
+  }
+
+  /* Drop feedback while dragging over a row: an insertion line for
+     before/after, a full highlight for into-a-folder. */
+  .sidebar-row.drop-target {
+    background: rgb(184 146 106 / 0.14);
+  }
+
+  .sidebar-row.drop-target[data-drop-mode="into"] {
+    outline: 1.5px solid rgb(184 146 106 / 0.7);
+    outline-offset: -1.5px;
+    border-radius: 6px;
+  }
+
+  .sidebar-row.drop-target[data-drop-mode="before"]::before,
+  .sidebar-row.drop-target[data-drop-mode="after"]::after {
+    content: "";
+    position: absolute;
+    left: 0.25rem;
+    right: 0.25rem;
+    height: 2px;
+    border-radius: 1px;
+    background: #d8b48c;
+  }
+
+  .sidebar-row.drop-target[data-drop-mode="before"]::before {
+    top: -1px;
+  }
+
+  .sidebar-row.drop-target[data-drop-mode="after"]::after {
+    bottom: -1px;
+  }
+
+  /* The rows are the drop targets; the list itself stays transparent
+     to drops so misses fall through cleanly. */
+  .sidebar-item {
+    position: relative;
+  }
+
+  .sidebar-row[draggable="true"] {
+    -webkit-user-drag: element;
+  }
+
   .sidebar-row-title {
+    flex: 1 1 auto;
+    min-width: 0;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
+  }
+
+  /* The inline rename input: same size and face as the title it
+     replaces, so the swap reads as the text becoming editable, not a
+     new control appearing. */
+  .sidebar-rename-input {
+    width: 100%;
+    min-width: 0;
+    padding: 0 0.25rem;
+    border: 1px solid rgb(184 146 106 / 0.7);
+    border-radius: 4px;
+    background: rgb(0 0 0 / 0.35);
+    color: #e8e6e3;
+    font: inherit;
+    font-size: inherit;
+    line-height: inherit;
+  }
+
+  .sidebar-rename-input:focus {
+    outline: none;
+    border-color: #d8b48c;
   }
 
   /* The formatting toolbar: a rounded floating pill, bottom-centered
@@ -256,8 +625,9 @@
     position: fixed;
     bottom: 0;
     /* The sidebar runs the full window height; keep the status line
-       over the editor column, not underneath the rail. */
-    left: 13.5rem;
+       over the editor column, not underneath the rail. The variable
+       tracks live resizes because the handle sets it on :root. */
+    left: var(--sidebar-width, 13.5rem);
     right: 0;
     display: flex;
     justify-content: flex-end;
@@ -302,7 +672,9 @@
   }
 
   /* The markdown-source surface: same geometry as the writable space,
-     but a plain textarea - no rich formatting, raw markdown only. */
+     raw markdown only. Wrapping matches the rich view (pre-wrap, not
+     pre): long paragraphs wrap at the edge instead of running off on
+     one horizontal line. Blank lines still separate paragraphs. */
   #source-space {
     resize: none;
     border: 0;
@@ -311,7 +683,8 @@
     font-family: var(--font-writing-mono);
     font-size: var(--font-writing-size);
     line-height: 1.75;
-    white-space: pre;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
   }
 
   #source-space:focus {

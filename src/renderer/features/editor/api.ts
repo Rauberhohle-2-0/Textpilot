@@ -44,6 +44,15 @@ export async function saveDocument(id: string, markdown: string): Promise<Docume
   return (await response.json()) as DocumentRecord;
 }
 
+export async function deleteDocument(id: string): Promise<void> {
+  const response = await fetch(`/api/documents/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+  if (!response.ok && response.status !== 404) {
+    throw new Error(`delete failed: ${response.status}`);
+  }
+}
+
 /**
  * The document the editor opens at boot: the most recently edited one,
  * or a fresh document on first launch - never an empty screen with no

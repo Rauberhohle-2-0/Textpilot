@@ -30,6 +30,8 @@ export interface EditorOptions {
 export function createEditor({ onStatus = () => {} }: EditorOptions = {}): Component<HTMLDivElement> & {
   /** Open a document by id; the save path follows the open one. */
   openDocument(id: string): Promise<void>;
+  /** Clear the editor when no document is left to show. */
+  showBlank(): void;
 } {
   const store = new EditorStore();
 
@@ -224,6 +226,25 @@ export function createEditor({ onStatus = () => {} }: EditorOptions = {}): Compo
     }
   }
 
+  /**
+   * Clear the surface when there is no document to show - e.g. the
+   * last document was deleted. Any pending save of the previous
+   * document is dropped first, so it cannot resurrect deleted text.
+   */
+  function showBlank(): void {
+    clearTimeout(timer);
+    editingLocally = true;
+    try {
+      store.set({ markdown: "", documentId: null });
+    } finally {
+      editingLocally = false;
+    }
+    renderedMarkdown = "";
+    surface.innerHTML = "";
+    source.value = "";
+    onStatus("Ready");
+  }
+
   void (async () => {
     try {
       const document = await resolveActiveDocument();
@@ -244,6 +265,7 @@ export function createEditor({ onStatus = () => {} }: EditorOptions = {}): Compo
   return {
     element: root,
     openDocument,
+    showBlank,
     destroy() {
       clearTimeout(timer);
       disposeInputRules();
