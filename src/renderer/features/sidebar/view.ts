@@ -1,8 +1,9 @@
 /**
- * The sidebar: documents and folders, Finder-style.
+ * The sidebar: documents and folders as a Bear-style source list.
  *
  * A left rail rendering the tree - folders (nested to any depth) and
  * documents interleaved in one list, ordered by position, expandable.
+ * Folder rows carry a live document count at their right edge.
  * Rows accept drag & drop: a document or folder dragged onto a folder
  * moves inside it; dropped on a row's edge it reorders between
  * siblings. Folders live exactly where the user drops them - no pinning
@@ -73,9 +74,9 @@ export function createSidebar({
   function setHidden(next: boolean): void {
     hidden = next;
     document.body.classList.toggle("sidebar-hidden", hidden);
+    root.setAttribute("aria-hidden", String(hidden));
     window.localStorage.setItem(VISIBILITY_STORAGE_KEY, hidden ? "1" : "0");
   }
-  setHidden(hidden); // apply the restored state before first paint
 
   let width = clampWidth(
     Number(window.localStorage.getItem(WIDTH_STORAGE_KEY)) || DEFAULT_WIDTH,
@@ -252,9 +253,13 @@ export function createSidebar({
 
   // The collapsed-rail twin is toggled with the same body class the
   // hidden state uses, so it never needs its own visibility bookkeeping.
-  // The collapsed-rail twin is toggled with the same body class the
-  // hidden state uses, so it never needs its own visibility bookkeeping.
   document.body.append(toggle, newHiddenButton);
+
+  // Apply the restored visibility before first paint: the class is set
+  // synchronously here (still before boot appends the shell), so a
+  // restored hidden rail shows collapsed immediately with no animation.
+  // All later toggles animate via the CSS width/opacity transitions.
+  setHidden(hidden);
 
   // ------------------------------------------------------------------
   // Drag & drop
@@ -468,6 +473,28 @@ export function createSidebar({
     return input;
   }
 
+  /**
+   * Documents inside a folder's whole subtree (nested folders
+   * included). Recomputed from live state on every render, so the
+   * count stays honest through creates, moves and deletes.
+   */
+  function documentCountInFolder(folderId: string): number {
+    const subtree = new Set<string>([folderId]);
+    let grew = true;
+    while (grew) {
+      grew = false;
+      for (const folder of folders) {
+        if (folder.parentId !== null && subtree.has(folder.parentId) && !subtree.has(folder.id)) {
+          subtree.add(folder.id);
+          grew = true;
+        }
+      }
+    }
+    return documents.filter(
+      (document) => document.parentId != null && subtree.has(document.parentId),
+    ).length;
+  }
+
   function folderRow(folder: FolderMeta, depth: number): HTMLLIElement {
     const isCollapsed = collapsed.has(folder.id);
 
@@ -572,6 +599,7 @@ export function createSidebar({
       { class: "sidebar-row-title" },
       renamingId === folder.id ? buildRenameInput(folder.id, folder.name) : folder.name,
     );
+    const count = h("span", { class: "sidebar-count" }, String(documentCountInFolder(folder.id)));
     // The row is a div with button semantics, not a <button>: a button
     // may not contain other buttons (chevron, actions, delete), and
     // browsers - WebKit in particular - never dispatch clicks to
@@ -589,6 +617,7 @@ export function createSidebar({
       chevron,
       folderIcon(isCollapsed),
       titleSpan,
+      count,
       addDocumentButton,
       addFolderButton,
       deleteButton,
@@ -624,7 +653,7 @@ export function createSidebar({
     wireDrop(rowButton, { kind: "folder", folder, depth });
 
     const row = h("li", { class: "sidebar-item" }, rowButton);
-    row.style.paddingLeft = `${depth * 0.85}rem`;
+    row.style.paddingLeft = `${depth * 1}rem`;
     return row;
   }
 
@@ -695,7 +724,7 @@ export function createSidebar({
     wireDrop(rowButton, { kind: "document", document, depth });
 
     const row = h("li", { class: "sidebar-item" }, rowButton);
-    row.style.paddingLeft = `${depth * 0.85}rem`;
+    row.style.paddingLeft = `${depth * 1}rem`;
     return row;
   }
 
