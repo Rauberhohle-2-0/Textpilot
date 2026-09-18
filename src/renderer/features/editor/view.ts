@@ -313,5 +313,5 @@ const EDITOR_CLASS = [
   "px-10",
   "pt-4",
   "pb-32",
-  "caret-[#b8926a]",
+  "caret-[var(--accent)]",
 ].join(" ");

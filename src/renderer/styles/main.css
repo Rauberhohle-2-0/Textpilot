@@ -27,11 +27,15 @@
 
   --window-bg: #ffffff;
   /* Translucent so the backdrop blur reads as macOS source-list
-     vibrancy (same recipe as the toolbar pill below). The selection
-     is a muted slate wash - Bear-style - rather than solid blue, so
-     it sits calmly on top of the frosted rail. */
-  --sidebar-bg: rgb(245 245 247 / 0.72);
-  --sidebar-selected-bg: rgb(119 136 153 / 0.35);
+     vibrancy (same recipe as the toolbar pill below): a shade under
+     the paper in light, a shade over the content in dark - the way
+     Finder paints its rail. The selection is the system accent, which
+     is what every native source list fills a picked row with. */
+  --sidebar-bg: rgb(236 236 238 / 0.78);
+  --sidebar-selected-bg: #007aff;
+  --sidebar-selected-fg: #ffffff;
+  /* What the picked row falls back to while the window is inactive. */
+  --sidebar-inactive-bg: rgb(0 0 0 / 0.1);
   --text-primary: #1d1d1f;
   --text-secondary: #6e6e73;
   --text-tertiary: #aeaeb2;
@@ -65,8 +69,9 @@
   color-scheme: dark;
 
   --window-bg: #1e1e1e;
-  --sidebar-bg: rgb(25 25 28 / 0.72);
-  --sidebar-selected-bg: rgb(255 255 255 / 0.14);
+  --sidebar-bg: rgb(44 44 47 / 0.76);
+  --sidebar-selected-bg: #0a84ff;
+  --sidebar-inactive-bg: rgb(255 255 255 / 0.12);
   --text-primary: #f5f5f7;
   --text-secondary: #98989f;
   --text-tertiary: #636366;
@@ -101,8 +106,9 @@
     color-scheme: dark;
 
     --window-bg: #1e1e1e;
-    --sidebar-bg: rgb(25 25 28 / 0.72);
-    --sidebar-selected-bg: rgb(255 255 255 / 0.14);
+    --sidebar-bg: rgb(44 44 47 / 0.76);
+    --sidebar-selected-bg: #0a84ff;
+    --sidebar-inactive-bg: rgb(255 255 255 / 0.12);
     --text-primary: #f5f5f7;
     --text-secondary: #98989f;
     --text-tertiary: #636366;
@@ -196,8 +202,10 @@
     overflow: hidden;
     /* The rail is the full window height - the traffic lights float
        over its top band - so the title bar and the sidebar blend into
-       one surface instead of stacking as two strips. */
-    padding: 0 0.6rem 1rem;
+       one surface instead of stacking as two strips. Horizontal padding
+       lives on the scroll body and footer, not the rail, so the footer
+       hairline and the collapse animation span the full width. */
+    padding: 0 0 0.25rem;
     background: var(--sidebar-bg);
     /* Subtle frosted glass: translucent fill + backdrop blur and
        saturation, the same recipe as the floating toolbar. */
@@ -219,14 +227,14 @@
      source-list fill so the rail never turns sheer-transparent. */
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
     :root {
-      --sidebar-bg: #f5f5f7;
+      --sidebar-bg: #ececee;
     }
     :root[data-theme="dark"] {
-      --sidebar-bg: #19191c;
+      --sidebar-bg: #2b2b2e;
     }
     @media (prefers-color-scheme: dark) {
       :root:not([data-theme="light"]) {
-        --sidebar-bg: #19191c;
+        --sidebar-bg: #2b2b2e;
       }
     }
   }
@@ -242,6 +250,7 @@
     overflow-x: hidden;
     display: flex;
     flex-direction: column;
+    padding: 0 0.5rem;
     opacity: 1;
     transform: translateX(0);
     transition:
@@ -293,9 +302,7 @@
   }
 
   body.sidebar-resizing .sidebar,
-  body.sidebar-resizing .sidebar-toggle,
-  body.sidebar-resizing .theme-switch,
-  body.sidebar-resizing .sidebar-new-button.sidebar-new-button--hidden-rail,
+  body.sidebar-resizing .titlebar-controls,
   body.sidebar-resizing .status-bar {
     transition: none !important;
   }
@@ -325,6 +332,9 @@
 
   body.sidebar-hidden .sidebar-scroll {
     opacity: 0;
+  }
+
+  body.sidebar-hidden .sidebar-scroll {
     transform: translateX(-14px);
   }
 
@@ -337,126 +347,75 @@
     left: 0;
   }
 
-  /* The panel toggle: one button, one icon, fixed to the title-bar
-     row. Vertically centered on the traffic lights' band; the left
-     offset follows the rail with a comfortable gap, so it breathes
-     instead of gluing to the edge - and lands on the window edge when
-     the rail is hidden. Sized (1.6rem) and inset to sit exactly above
-     the new-document button: rail padding (0.6rem) + header padding
-     (0.3rem) put that button's right edge at
-     var(--sidebar-width) - 0.9rem, so left is width - 2.5rem here.
-     Keep in sync with .sidebar-header padding and .sidebar-new-button
-     size, or the two drift apart by a few pixels. It snaps between
-     the rail edge and the window edge with no glide - the same
-     instant appear as the new-document twin and the theme switch. */
-  .sidebar-toggle {
+  /* The title-bar controls over the editor column: the panel toggle,
+     the appearance switch, plus a new-document twin that only appears
+     while the rail is hidden. One fixed row, never inside the sidebar,
+     so the rail's top stays clean under the traffic lights, the way
+     Finder and Notes keep it. The row glides with the rail's edge on
+     the same spring as the collapse, and parks at the window inset
+     once the rail is gone. Ghost squares with a hover fill, matching
+     the sidebar's own buttons.
+     (The twin needs both class names: its selector must outrank the
+     in-flow wide-button rule, or that rule keeps it visible.) */
+  .titlebar-controls {
     position: fixed;
-    top: calc((var(--vantail-titlebar-height, 36px) - 1.6rem) / 2);
-    left: calc(var(--sidebar-width, 13.5rem) - 2.5rem);
+    top: calc((var(--vantail-titlebar-height, 36px) - 1.5rem) / 2);
+    left: calc(var(--sidebar-width, 13.5rem) + 0.5rem);
     z-index: 40;
+    display: flex;
+    align-items: center;
+    gap: 0.1rem;
+    transition: left var(--sidebar-collapse-duration) var(--sidebar-collapse-ease);
+  }
+
+  .titlebar-controls button {
     display: grid;
     place-items: center;
-    width: 1.6rem;
-    height: 1.6rem;
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0;
     border: 0;
-    border-radius: 6px;
+    border-radius: 5px;
     background: transparent;
-    color: var(--text-tertiary);
+    color: var(--text-secondary);
     cursor: pointer;
-    transition: transform 120ms ease-out;
+    transition:
+      background 100ms ease,
+      color 100ms ease;
   }
 
-  .sidebar-toggle:active {
-    transform: scale(0.92);
+  /* The theme slot is only a mount point: contents render the button
+     itself as a row item, so gaps stay even. Empty, it takes no space. */
+  .titlebar-theme-slot {
+    display: contents;
   }
 
-  body.sidebar-hidden .sidebar-toggle {
-    left: calc(var(--vantail-titlebar-inset-left, 0px) + 2.65rem);
+  .titlebar-theme-slot:empty {
+    display: none;
   }
 
-  /* New-document twin for the collapsed rail: the header's new buttons
-     disappear with the rail, so one ghost button sits beside the
-     toggle while the sidebar is hidden. Same square and icon metrics
-     as .sidebar-toggle so the pair reads as one control group. It
-     appears instantly - no entrance choreography, just like the theme
-     switch - snapping between its parked position under the toggle and
-     the window edge. Two class names: the doubled selector must
-     outrank the base .sidebar-new-button rule below, whose
-     display:grid would otherwise win (same specificity, later in the
-     file) and keep the twin visible even with the rail open. */
+  /* Parked until the rail goes away: takes no space and leaves the tab
+     order, so the open rail shows toggle + theme only. */
   .sidebar-new-button.sidebar-new-button--hidden-rail {
-    position: fixed;
-    top: calc((var(--vantail-titlebar-height, 36px) - 1.6rem) / 2);
-    left: calc(var(--sidebar-width, 13.5rem) - 2.5rem);
-    z-index: 40;
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-    transition: transform 120ms ease-out;
+    display: none;
+  }
+
+  body.sidebar-hidden .titlebar-controls {
+    left: calc(var(--vantail-titlebar-inset-left, 0px) + 0.5rem);
   }
 
   body.sidebar-hidden .sidebar-new-button--hidden-rail {
-    left: calc(var(--vantail-titlebar-inset-left, 0px) + 4.85rem);
-    opacity: 1;
-    visibility: visible;
-    pointer-events: auto;
-  }
-
-   .sidebar-new-button.sidebar-new-button--hidden-rail:active {
-     transform: scale(0.92);
-   }
-
-  .sidebar-toggle:hover {
-    background: var(--hover-strong);
-    color: var(--text-primary);
-  }
-
-  .sidebar-toggle svg {
-    width: 1.05rem;
-    height: 1.05rem;
-  }
-
-  /* The theme switch: the same ghost square as the panel toggle,
-     exactly above the header's new-folder button - both pairs run on
-     the same 1.8rem pitch (1.6rem squares, 0.2rem gap), so the two
-     rows form exact columns. It snaps between the rail edge and the
-     window edge with no glide - the same instant appear as the
-     other two buttons. When the rail is hidden it lands on the window
-     edge as the first control ahead of the toggle and the
-     new-document twin. */
-  .theme-switch {
-    position: fixed;
-    top: calc((var(--vantail-titlebar-height, 36px) - 1.6rem) / 2);
-    left: calc(var(--sidebar-width, 13.5rem) - 4.3rem);
-    z-index: 40;
     display: grid;
-    place-items: center;
-    width: 1.6rem;
-    height: 1.6rem;
-    border: 0;
-    border-radius: 6px;
-    background: transparent;
-    color: var(--text-tertiary);
-    cursor: pointer;
-    transition: transform 120ms ease-out;
   }
 
-  .theme-switch:hover {
+  .titlebar-controls button:hover {
     background: var(--hover-strong);
     color: var(--text-primary);
   }
 
-  .theme-switch:active {
-    transform: scale(0.92);
-  }
-
-  .theme-switch svg {
-    width: 1.05rem;
-    height: 1.05rem;
-  }
-
-  body.sidebar-hidden .theme-switch {
-    left: calc(var(--vantail-titlebar-inset-left, 0px) + 0.45rem);
+  .titlebar-controls button svg {
+    width: 1rem;
+    height: 1rem;
   }
 
   /* The band the traffic lights float over: fixed height, non-scrolling
@@ -465,8 +424,8 @@
   .sidebar-drag-band {
     flex: none;
     height: calc(var(--vantail-titlebar-height, 36px) + 0.4rem);
-    margin: 0 -0.6rem; /* reach across the rail's side padding */
-    position: relative; /* anchors the new-document button */
+    margin: 0;
+    position: relative;
     user-select: none;
     -webkit-user-select: none;
   }
@@ -477,82 +436,133 @@
     gap: 0.15rem;
   }
 
+  /* Source-list header: the title only. Toggle and appearance live in
+     the title-bar controls over the editor column; the wide
+     new-document button + new-folder square sit in the row below. */
   .sidebar-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: 0.35rem;
-    padding: 0.35rem 0.3rem 0.35rem 0.55rem;
+    padding: 0.45rem 0.3rem 0.25rem 0.35rem;
   }
 
-  /* The header's right side: new-folder and new-document, a matched
-     pair in the panel toggle's ghost style. */
-  .sidebar-header-actions {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.2rem;
-  }
-
-  /* The section caption: small and quiet, the way source-list apps
-     label their groups - the rows carry the hierarchy, not the
-     heading. */
   .sidebar-header-label {
-    font-size: 0.78rem;
-    font-weight: 600;
-    color: var(--text-tertiary);
-    letter-spacing: 0.02em;
-  }
-
-  /* The new-document action: an icon-only ghost button in the
-     header's action pair. */
-  .sidebar-new-button {
-    display: grid;
-    place-items: center;
-    width: 1.6rem;
-    height: 1.6rem;
-    border: 0;
-    border-radius: 6px;
-    background: transparent;
-    color: var(--text-tertiary);
-    cursor: pointer;
-  }
-
-  .sidebar-new-button:hover {
-    background: var(--hover-strong);
+    font-size: 0.9375rem; /* 15px */
+    font-weight: 700;
     color: var(--text-primary);
+    letter-spacing: -0.01em;
   }
 
-  .sidebar-new-button:disabled {
+  /* The creation row under the header: the new-document button takes
+     the full remaining width, the new-folder button is a fixed square
+     at its side. Both carry a hairline border and rounded corners, the
+     document button tinted with the accent so it reads as primary. */
+  .sidebar-actions {
+    display: flex;
+    align-items: stretch;
+    gap: 0.5rem;
+    padding: 0.35rem 0.35rem 0.5rem;
+  }
+
+  .sidebar-actions .sidebar-new-button {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.25rem;
+    padding: 0 0.75rem;
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    border-radius: 8px;
+    background: var(--accent-bg);
+    color: var(--text-primary);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      background 100ms ease,
+      border-color 100ms ease;
+  }
+
+  .sidebar-actions .sidebar-new-button:hover:not(:disabled) {
+    background: var(--hover-strong);
+  }
+
+  .sidebar-actions .sidebar-new-button:disabled {
     opacity: 0.5;
     cursor: default;
   }
 
-  .sidebar-new-button svg {
-    width: 1.05rem;
-    height: 1.05rem;
+  .sidebar-actions .sidebar-new-button svg {
+    width: 1rem;
+    height: 1rem;
+    flex: none;
+  }
+
+  .sidebar-new-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .sidebar-actions .sidebar-new-folder-button {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 2.25rem;
+    min-height: 2.25rem;
+    padding: 0;
+    border: 1px solid var(--separator);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition:
+      background 100ms ease,
+      color 100ms ease;
+  }
+
+  .sidebar-actions .sidebar-new-folder-button:hover:not(:disabled) {
+    background: var(--hover-strong);
+    color: var(--text-primary);
+  }
+
+  .sidebar-actions .sidebar-new-folder-button:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  .sidebar-actions .sidebar-new-folder-button svg {
+    width: 1rem;
+    height: 1rem;
   }
 
   .sidebar-list {
     display: flex;
     flex-direction: column;
-    gap: 0.1rem;
+    gap: 1px; /* native rows sit flush; a hairline keeps them distinct */
     margin: 0;
     padding: 0;
     list-style: none;
   }
 
+  /* A source-list row: 25px tall, a 13px label, 5px corners - the
+     metrics Finder and Mail use, so the rail reads as one of them and
+     not as a web list. */
   .sidebar-row {
     display: flex;
     align-items: center;
-    gap: 0.6rem;
+    gap: 0.35rem;
     width: 100%;
-    padding: 0.42rem 0.6rem;
+    height: 1.55rem;
+    padding: 0 0.3rem;
     border: 0;
-    border-radius: 7px;
+    border-radius: 5px;
     background: transparent;
     color: var(--text-primary);
-    font-size: 0.86rem;
-    line-height: 1.35;
+    font-size: 0.8125rem; /* 13px */
+    line-height: 1;
     cursor: pointer;
     text-align: left;
   }
@@ -566,8 +576,8 @@
     display: none;
     place-items: center;
     flex: none;
-    width: 1.35rem;
-    height: 1.35rem;
+    width: 1.25rem;
+    height: 1.25rem;
     margin-left: auto;
     padding: 0;
     border: 0;
@@ -603,8 +613,8 @@
     display: none;
     place-items: center;
     flex: none;
-    width: 1.35rem;
-    height: 1.35rem;
+    width: 1.25rem;
+    height: 1.25rem;
     padding: 0;
     border: 0;
     border-radius: 5px;
@@ -661,21 +671,31 @@
     outline-offset: -2px;
   }
 
-  /* The selected row: a muted slate wash over the frosted rail with
-     dark text throughout - Bear-style, calmer on vibrancy than a
-     solid-blue selection. */
+  /* The selected row: the system accent filled across the row, label
+     and glyphs in white - exactly how a native source list marks the
+     item you are on. */
   .sidebar-row--selected,
   .sidebar-row--selected:hover {
     background: var(--sidebar-selected-bg);
+    color: var(--sidebar-selected-fg);
+  }
+
+  .sidebar-row--selected .sidebar-icon,
+  .sidebar-row--selected .sidebar-disclosure {
+    color: var(--sidebar-selected-fg);
+  }
+
+  /* Window in the background: the accent gives way to a neutral wash,
+     exactly like an unfocused Finder. */
+  body.window-inactive .sidebar-row--selected,
+  body.window-inactive .sidebar-row--selected:hover {
+    background: var(--sidebar-inactive-bg);
     color: var(--text-primary);
   }
 
-  .sidebar-row--selected .sidebar-icon {
+  body.window-inactive .sidebar-row--selected .sidebar-icon,
+  body.window-inactive .sidebar-row--selected .sidebar-disclosure {
     color: var(--text-secondary);
-  }
-
-  .sidebar-row--selected .sidebar-chevron {
-    color: var(--text-tertiary);
   }
 
   .sidebar-icon {
@@ -685,22 +705,29 @@
     color: var(--text-secondary);
   }
 
-  /* Folder rows: monochrome outline icons like the documents - depth
-     reads from chevrons and indentation, not folder color. */
+  /* Folder glyphs are solid, Finder-style: the hierarchy reads from
+     filled shapes at a glance instead of from line art. */
   .sidebar-row--folder .sidebar-icon {
-    color: var(--text-secondary);
+    fill: currentColor;
   }
 
-  /* The disclosure chevron: a hairline icon in the tertiary gray
-     that rotates when collapsed. It is part of the row button, so it
-     toggles with the click too. */
-  .sidebar-chevron {
+  /* The leading gutter: the disclosure triangle's slot on a folder, an
+     empty spacer on a document. Fixed width on both, so a level's
+     icons stand in one column and nesting shows up as pure indent. */
+  .sidebar-gutter,
+  .sidebar-disclosure {
     display: grid;
     place-items: center;
     flex: none;
     width: 1rem;
     height: 1rem;
-    margin-left: -0.35rem;
+  }
+
+  /* The disclosure triangle: a small solid wedge in the tertiary gray,
+     Mail-style - pointing right while the folder is folded, down while
+     it is open. It is part of the row, so clicking it is the same as
+     clicking the row. */
+  .sidebar-disclosure {
     padding: 0;
     border: 0;
     background: transparent;
@@ -709,46 +736,15 @@
     transition: transform 120ms ease;
   }
 
-  .sidebar-chevron svg {
-    width: 0.75rem;
-    height: 0.75rem;
+  .sidebar-disclosure svg {
+    width: 0.7rem;
+    height: 0.7rem;
+    fill: currentColor;
+    stroke: currentColor;
   }
 
-  .sidebar-chevron--collapsed {
-    transform: rotate(0deg);
-  }
-
-  .sidebar-chevron:not(.sidebar-chevron--collapsed) {
+  .sidebar-disclosure--open {
     transform: rotate(90deg);
-  }
-
-  /* The new-folder button: twin of the new-document button, on its
-     left in the header's action pair. */
-  .sidebar-new-folder-button {
-    display: grid;
-    place-items: center;
-    width: 1.6rem;
-    height: 1.6rem;
-    border: 0;
-    border-radius: 6px;
-    background: transparent;
-    color: var(--text-tertiary);
-    cursor: pointer;
-  }
-
-  .sidebar-new-folder-button:hover {
-    background: var(--hover-strong);
-    color: var(--text-primary);
-  }
-
-  .sidebar-new-folder-button:disabled {
-    opacity: 0.5;
-    cursor: default;
-  }
-
-  .sidebar-new-folder-button svg {
-    width: 1.05rem;
-    height: 1.05rem;
   }
 
   /* Drop feedback while dragging over a row: an insertion line for
@@ -1093,8 +1089,9 @@
   @media (prefers-reduced-motion: reduce) {
     .sidebar,
     .sidebar-scroll,
-    .sidebar-toggle,
-    .theme-switch,
+    .sidebar-disclosure,
+    .titlebar-controls,
+    .titlebar-controls button,
     .sidebar-new-button.sidebar-new-button--hidden-rail,
     .status-bar {
       transition: none !important;

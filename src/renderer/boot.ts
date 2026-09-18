@@ -5,14 +5,19 @@
  * shared status line - is wired here rather than hidden inside a feature,
  * so features stay independent and the shell stays boring.
  */
-import type { Component } from "./core/index.ts";
-import { h } from "./core/dom.ts";
-import { createEditor } from "./features/editor/index.ts";
-import { createSidebar } from "./features/sidebar/index.ts";
-import "./styles/main.css";
+import type { Component } from './core/index.ts'
+import { h } from './core/dom.ts'
+import { createEditor } from './features/editor/index.ts'
+import { createSidebar } from './features/sidebar/index.ts'
+import { createThemeSwitch, initTheme } from './features/theme/index.ts'
+import './styles/main.css'
 
 export function boot(root: HTMLElement = document.body): void {
-  const features: Component[] = [];
+  // Pin the stored appearance before first paint so a saved dark mode
+  // never flashes light (system = no attribute, CSS media decides).
+  initTheme()
+
+  const features: Component[] = []
 
   // Native title-bar strip: an empty, non-interactive band at the top of
   // the window. The runtime moves the window from this band and maximises
@@ -24,39 +29,59 @@ export function boot(root: HTMLElement = document.body): void {
   // The sidebar spans the full window height - traffic lights floating
   // over it, macOS source-list style - so the strip only sits over the
   // editor column. The sidebar carries its own drag band inside.
-  const shell = h("div", {
-    class: "flex flex-row h-screen w-screen overflow-hidden",
-  });
-  const titleBar = h("header", {
-    class: "titlebar-spacer",
-    "data-vantail-drag": "",
-    "aria-hidden": "true",
-  });
-  const editorColumn = h("div", { class: "flex-1 min-w-0 flex flex-col" });
+  const shell = h('div', {
+    class: 'flex flex-row h-screen w-screen overflow-hidden',
+  })
+  const titleBar = h('header', {
+    class: 'titlebar-spacer',
+    'data-vantail-drag': '',
+    'aria-hidden': 'true',
+  })
+  const editorColumn = h('div', { class: 'flex-1 min-w-0 flex flex-col' })
 
-  const editor = createEditor();
-  features.push(editor);
+  const editor = createEditor()
+  features.push(editor)
   const sidebar = createSidebar({
     onOpenDocument(id) {
-      void editor.openDocument(id);
+      void editor.openDocument(id)
     },
     onDocumentDeleted(nextId) {
       if (nextId !== null) {
-        void editor.openDocument(nextId);
-        return;
+        void editor.openDocument(nextId)
+        return
       }
       // The last document is gone: give the editor a blank canvas so
       // a deleted document's text cannot linger on screen.
-      editor.showBlank();
+      editor.showBlank()
     },
-  });
-  features.push(sidebar);
+  })
+  features.push(sidebar)
 
-  editorColumn.append(titleBar, editor.element);
-  shell.append(sidebar.element, editorColumn);
-  root.append(shell);
+  editorColumn.append(titleBar, editor.element)
+  shell.append(sidebar.element, editorColumn)
+  root.append(shell)
 
-  window.addEventListener("beforeunload", () => {
-    for (const feature of features) feature.destroy?.();
-  });
+  // Mounted only once the shell is in the document: the switch docks
+  // into the slot the sidebar hands it, so it rides the title-bar
+  // controls next to the panel toggle. Created any earlier, its mount
+  // point is not in the document yet and the button lands detached.
+  const themeSwitch = createThemeSwitch(sidebar.themeSlot)
+  features.push(themeSwitch)
+
+  // Native window state: while the window is in the background macOS
+  // gives up its accent selection and grays the picked row, so a
+  // blurred window never looks like the one you are working in. One
+  // class on <body> carries that, the CSS does the rest.
+  const syncWindowFocus = (): void => {
+    document.body.classList.toggle('window-inactive', !document.hasFocus())
+  }
+  window.addEventListener('focus', syncWindowFocus)
+  window.addEventListener('blur', syncWindowFocus)
+  syncWindowFocus()
+
+  window.addEventListener('beforeunload', () => {
+    window.removeEventListener('focus', syncWindowFocus)
+    window.removeEventListener('blur', syncWindowFocus)
+    for (const feature of features) feature.destroy?.()
+  })
 }

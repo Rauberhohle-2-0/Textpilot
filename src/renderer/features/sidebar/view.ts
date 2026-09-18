@@ -40,11 +40,25 @@ export interface SidebarOptions {
   onDocumentDeleted(id: string | null): void;
 }
 
+/**
+ * The sidebar and the one mount point it offers other features: the
+ * theme slot in the always-visible title-bar controls. Handed over as
+ * an element rather than looked up by the theme feature, so nothing
+ * has to query the document before the shell is mounted.
+ */
+export interface SidebarComponent extends Component<HTMLElement> {
+  /** Theme slot in the title-bar controls - a blank div, filled by the
+   *  theme switch at boot. Hidden by CSS while it stays empty. */
+  readonly themeSlot: HTMLElement;
+}
+
 /** Width bounds and default, in px - the CSS fallback stays in sync. */
 const MIN_WIDTH = 180;
 const MAX_WIDTH = 420;
 const DEFAULT_WIDTH = 216; // 13.5rem
 const RESIZE_STEP = 16; // one arrow-key press
+/** One nesting level, in rem - the pitch a child's icon steps in by. */
+const INDENT = 1;
 const WIDTH_STORAGE_KEY = "textpilot.sidebar-width";
 const VISIBILITY_STORAGE_KEY = "textpilot.sidebar-hidden";
 const EXPANDED_STORAGE_KEY = "textpilot.sidebar-expanded";
@@ -52,7 +66,7 @@ const EXPANDED_STORAGE_KEY = "textpilot.sidebar-expanded";
 export function createSidebar({
   onOpenDocument,
   onDocumentDeleted,
-}: SidebarOptions): Component<HTMLElement> {
+}: SidebarOptions): SidebarComponent {
   let documents: DocumentMeta[] = [];
   let folders: FolderMeta[] = [];
   /** The document currently shown in the editor, mirrored for selection. */
@@ -98,6 +112,8 @@ export function createSidebar({
 
   const list = h("ul", { class: "sidebar-list", role: "list" });
 
+  // Primary creation control in the enlarged sidebar: a wide button with
+  // a label (picture layout), sharing the row with the new-folder square.
   const newButton = h(
     "button",
     {
@@ -106,7 +122,8 @@ export function createSidebar({
       title: "New document",
       "aria-label": "New document",
     },
-    createElement(icons.SquarePen),
+    createElement(icons.FilePlus),
+    h("span", { class: "sidebar-new-label" }, "New document"),
   );
   /** Create a document and open it - shared by both new buttons. */
   async function createAndOpenDocument(button: HTMLButtonElement): Promise<void> {
@@ -125,10 +142,11 @@ export function createSidebar({
   }
   newButton.addEventListener("click", () => void createAndOpenDocument(newButton));
 
-  // Twin of the header's new-document button for the collapsed rail:
-  // pinned next to the panel toggle, shown only while the sidebar is
-  // hidden (the header pair is then out of sight too). No folder twin -
-  // the collapsed rail keeps just the essentials.
+  // Twin of the sidebar's new-document button for the collapsed rail:
+  // pinned in the title-bar controls next to the panel toggle, shown
+  // only while the sidebar is hidden (the wide button is then out of
+  // sight too). No folder twin - the collapsed rail keeps just the
+  // essentials.
   const newHiddenButton = h(
     "button",
     {
@@ -137,11 +155,12 @@ export function createSidebar({
       title: "New document",
       "aria-label": "New document",
     },
-    createElement(icons.SquarePen),
+    createElement(icons.FilePlus),
   );
   newHiddenButton.addEventListener("click", () => void createAndOpenDocument(newHiddenButton));
 
-  // New folder: sits beside the new-document button in the title bar.
+  // New folder: the square companion of the wide new-document button,
+  // directly under the header (picture layout).
   const newFolderButton = h(
     "button",
     {
@@ -167,7 +186,13 @@ export function createSidebar({
     }
   });
 
-  const toggle = h(
+  function syncToggle(): void {
+    panelToggle.setAttribute("aria-expanded", String(!hidden));
+  }
+
+  // Panel toggle: lives in the title-bar controls over the editor column,
+  // always visible, gliding with the rail's edge on collapse/expand.
+  const panelToggle = h(
     "button",
     {
       type: "button",
@@ -178,10 +203,15 @@ export function createSidebar({
     },
     createElement(icons.PanelLeft),
   );
-  toggle.addEventListener("click", () => {
+  panelToggle.addEventListener("click", () => {
     setHidden(!hidden);
-    toggle.setAttribute("aria-expanded", String(!hidden));
+    syncToggle();
   });
+
+  // Appearance slot for the title-bar controls: an empty mount point
+  // for whatever control another feature owns (today, the theme
+  // switch), sitting right next to the panel toggle.
+  const themeSlot = h("div", { class: "titlebar-theme-slot" });
 
   const handle = h("div", {
     class: "sidebar-resize-handle",
@@ -229,6 +259,19 @@ export function createSidebar({
 
   setWidth(width);
 
+  // Title-bar controls over the editor column: the panel toggle, the
+  // appearance slot, and the collapsed-rail new-document twin (shown
+  // only while the sidebar is hidden). One fixed row that glides with
+  // the rail's edge, so the toggle and the theme switch are always side
+  // by side, rail open or not.
+  const titlebarControls = h(
+    "div",
+    { class: "titlebar-controls" },
+    panelToggle,
+    themeSlot,
+    newHiddenButton,
+  );
+
   const root = h(
     "nav",
     { class: "sidebar", "aria-label": "Documents" },
@@ -239,21 +282,25 @@ export function createSidebar({
       h(
         "div",
         { class: "sidebar-section" },
+        // Source-list header: the label only. The panel toggle and the
+        // appearance switch live in the title-bar controls over the
+        // editor column; the wide new-document button + new-folder
+        // square sit in the row directly below.
         h(
           "div",
           { class: "sidebar-header" },
           h("span", { class: "sidebar-header-label" }, "Documents"),
-          h("span", { class: "sidebar-header-actions" }, newFolderButton, newButton),
         ),
+        h("div", { class: "sidebar-actions" }, newButton, newFolderButton),
         list,
       ),
     ),
     handle,
   );
 
-  // The collapsed-rail twin is toggled with the same body class the
-  // hidden state uses, so it never needs its own visibility bookkeeping.
-  document.body.append(toggle, newHiddenButton);
+  // The new-document twin is toggled with the same body class the hidden
+  // state uses, so it never needs its own visibility bookkeeping.
+  document.body.append(titlebarControls);
 
   // Apply the restored visibility before first paint: the class is set
   // synchronously here (still before boot appends the shell), so a
@@ -575,18 +622,21 @@ export function createSidebar({
       void handleFolderDelete(folder);
     });
 
-    const chevron = h(
+    // Solid disclosure triangle, Mail-style: one leading gutter every
+    // row shares, so a child's icon lands exactly one level in from its
+    // parent's instead of drifting with the chevron's width.
+    const disclosure = h(
       "button",
       {
         type: "button",
-        class: "sidebar-chevron" + (isCollapsed ? " sidebar-chevron--collapsed" : ""),
+        class: "sidebar-disclosure" + (isCollapsed ? "" : " sidebar-disclosure--open"),
         title: isCollapsed ? "Expand" : "Collapse",
         "aria-label": isCollapsed ? `Expand ${folder.name}` : `Collapse ${folder.name}`,
         "aria-expanded": String(!isCollapsed),
       },
-      createElement(icons.ChevronRight),
+      createElement(icons.Play),
     );
-    chevron.addEventListener("click", (event) => {
+    disclosure.addEventListener("click", (event) => {
       event.stopPropagation();
       if (collapsed.has(folder.id)) collapsed.delete(folder.id);
       else collapsed.add(folder.id);
@@ -614,7 +664,7 @@ export function createSidebar({
         draggable: "true",
         dataset: { folderId: folder.id },
       },
-      chevron,
+      disclosure,
       folderIcon(isCollapsed),
       titleSpan,
       count,
@@ -653,7 +703,7 @@ export function createSidebar({
     wireDrop(rowButton, { kind: "folder", folder, depth });
 
     const row = h("li", { class: "sidebar-item" }, rowButton);
-    row.style.paddingLeft = `${depth * 1}rem`;
+    row.style.paddingLeft = `${depth * INDENT}rem`;
     return row;
   }
 
@@ -691,6 +741,7 @@ export function createSidebar({
         draggable: "true",
         dataset: { documentId: document.id },
       },
+      gutter(),
       icon(),
       titleSpan,
       deleteButton,
@@ -724,7 +775,7 @@ export function createSidebar({
     wireDrop(rowButton, { kind: "document", document, depth });
 
     const row = h("li", { class: "sidebar-item" }, rowButton);
-    row.style.paddingLeft = `${depth * 1}rem`;
+    row.style.paddingLeft = `${depth * INDENT}rem`;
     return row;
   }
 
@@ -759,6 +810,16 @@ export function createSidebar({
     const node = createElement(collapsedFolder ? icons.Folder : icons.FolderOpen);
     node.classList.add("sidebar-icon");
     return node;
+  }
+
+  /**
+   * The leading gutter every row opens with: the disclosure triangle's
+   * slot on folders, an empty spacer on documents. Reserving it on both
+   * keeps the icons of one level in a straight column, so nesting reads
+   * from indentation alone - the way Mail and Finder line up theirs.
+   */
+  function gutter(): Node {
+    return h("span", { class: "sidebar-gutter", "aria-hidden": "true" });
   }
 
   function icon(): Node {
@@ -825,9 +886,9 @@ export function createSidebar({
 
   return {
     element: root,
+    themeSlot,
     destroy() {
-      toggle.remove();
-      newHiddenButton.remove();
+      titlebarControls.remove();
       document.body.classList.remove("sidebar-resizing", "sidebar-hidden");
     },
   };

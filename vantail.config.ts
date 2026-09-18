@@ -12,7 +12,10 @@ export default defineConfig({
     height: 800,
     minWidth: 1280,
     minHeight: 800,
-    backgroundColor: '#0b0d12',
+    // Native macOS window gray (dark). The page itself paints light or
+    // dark via CSS `prefers-color-scheme`, so this is only the very
+    // first paint before styles load.
+    backgroundColor: '#1E1E1E',
     // Native chrome: the page runs to the top edge (titleBarStyle: "hidden")
     // and macOS keeps drawing its own traffic lights - no custom buttons.
     // (Rounded corners via `borderRadius` need `decorations: false`, which
