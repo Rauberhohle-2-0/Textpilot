@@ -112,6 +112,60 @@ export function createSidebar({
 
   const list = h("ul", { class: "sidebar-list", role: "list" });
 
+  // ----------------------------------------------------------------
+  // Shared glass tooltip: one floating bubble for the glass buttons,
+  // positioned by JS under the hovered control (flipped above when it
+  // would leave the window) and clamped inside the viewport, so it
+  // never lands on the list below. Replaces the native `title`
+  // tooltip, which is slow and - together with any custom bubble -
+  // shows twice.
+  // ----------------------------------------------------------------
+  const tooltip = h("span", { class: "glass-tooltip", role: "tooltip" });
+  let tooltipTimer: ReturnType<typeof setTimeout> | undefined;
+  let tooltipAnchor: HTMLElement | null = null;
+
+  function hideTooltip(): void {
+    window.clearTimeout(tooltipTimer);
+    tooltipTimer = undefined;
+    tooltipAnchor = null;
+    tooltip.classList.remove("glass-tooltip--visible");
+  }
+
+  function showTooltip(anchor: HTMLElement, label: string, delay: number): void {
+    window.clearTimeout(tooltipTimer);
+    tooltipTimer = setTimeout(() => {
+      tooltip.textContent = label;
+      if (tooltip.parentElement === null) document.body.append(tooltip);
+      const rect = anchor.getBoundingClientRect();
+      // Measure with the bubble in the flow, then clamp so a label
+      // near the window edge never clips.
+      const { width, height } = tooltip.getBoundingClientRect();
+      const margin = 8;
+      const left = Math.min(
+        Math.max(rect.left + rect.width / 2 - width / 2, margin),
+        window.innerWidth - width - margin,
+      );
+      let top = rect.bottom + 6;
+      if (top + height > window.innerHeight - margin) {
+        top = rect.top - height - 6; // flip above when the space below runs out
+      }
+      tooltip.style.left = `${Math.round(left)}px`;
+      tooltip.style.top = `${Math.round(top)}px`;
+      tooltipAnchor = anchor;
+      tooltip.classList.add("glass-tooltip--visible");
+    }, delay);
+  }
+
+  /** Wire one button to the shared tooltip; hover waits, focus is quick. */
+  function attachTooltip(button: HTMLButtonElement, label: string): void {
+    button.addEventListener("mouseenter", () => showTooltip(button, label, 500));
+    button.addEventListener("mouseleave", hideTooltip);
+    button.addEventListener("focus", () => showTooltip(button, label, 300));
+    button.addEventListener("blur", hideTooltip);
+    // Pressing the button dismisses the bubble at once.
+    button.addEventListener("mousedown", hideTooltip);
+  }
+
   // Primary creation control in the enlarged sidebar: a wide button with
   // a label (picture layout), sharing the row with the new-folder square.
   const newButton = h(
@@ -119,12 +173,12 @@ export function createSidebar({
     {
       type: "button",
       class: "sidebar-new-button",
-      title: "New document",
       "aria-label": "New document",
     },
     createElement(icons.FilePlus),
     h("span", { class: "sidebar-new-label" }, "New document"),
   );
+  attachTooltip(newButton, "New document");
   /** Create a document and open it - shared by both new buttons. */
   async function createAndOpenDocument(button: HTMLButtonElement): Promise<void> {
     button.disabled = true;
@@ -152,11 +206,11 @@ export function createSidebar({
     {
       type: "button",
       class: "sidebar-new-button sidebar-new-button--hidden-rail",
-      title: "New document",
       "aria-label": "New document",
     },
     createElement(icons.FilePlus),
   );
+  attachTooltip(newHiddenButton, "New document");
   newHiddenButton.addEventListener("click", () => void createAndOpenDocument(newHiddenButton));
 
   // New folder: the square companion of the wide new-document button,
@@ -166,11 +220,11 @@ export function createSidebar({
     {
       type: "button",
       class: "sidebar-new-folder-button",
-      title: "New folder",
       "aria-label": "New folder",
     },
     createElement(icons.FolderPlus),
   );
+  attachTooltip(newFolderButton, "New folder");
   newFolderButton.addEventListener("click", async () => {
     newFolderButton.disabled = true;
     try {
@@ -888,6 +942,8 @@ export function createSidebar({
     element: root,
     themeSlot,
     destroy() {
+      hideTooltip();
+      tooltip.remove();
       titlebarControls.remove();
       document.body.classList.remove("sidebar-resizing", "sidebar-hidden");
     },

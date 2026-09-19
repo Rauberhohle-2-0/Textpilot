@@ -57,6 +57,13 @@
   --placeholder: #aeaeb2;
   --marker: #6e6e73;
   --selection-bg: rgb(0 122 255 / 0.22);
+  /* Liquid-glass buttons (sidebar actions): a top-lit sheen plus a
+     hover veil. In light mode glass sits on a bright surface, so the
+     base is whiter and hover darkens (like native controls); in dark
+     mode hover brightens. Gradients can't ride a var() alone, so the
+     two stops of the hover veil are the token pair. */
+  --glass-hover-veil-top: rgb(0 0 0 / 0.05);
+  --glass-hover-veil-bottom: rgb(0 0 0 / 0.04);
 }
 
 /* Explicit override: pinned light regardless of the system setting. */
@@ -93,11 +100,15 @@
   --placeholder: #636366;
   --marker: #98989f;
   --selection-bg: rgb(10 132 255 / 0.35);
+  --glass-hover-veil-top: rgb(255 255 255 / 0.12);
+  --glass-hover-veil-bottom: rgb(255 255 255 / 0.07);
 }
 
 /* Explicit override: pinned light regardless of the system setting. */
 :root[data-theme="light"] {
   color-scheme: light;
+  --glass-hover-veil-top: rgb(0 0 0 / 0.05);
+  --glass-hover-veil-bottom: rgb(0 0 0 / 0.04);
 }
 
 /* System preference: dark, unless pinned light via [data-theme]. */
@@ -130,6 +141,22 @@
     --placeholder: #636366;
     --marker: #98989f;
     --selection-bg: rgb(10 132 255 / 0.35);
+    --glass-hover-veil-top: rgb(255 255 255 / 0.12);
+    --glass-hover-veil-bottom: rgb(255 255 255 / 0.07);
+  }
+
+  /* Explicit override: pinned light regardless of the system setting. */
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --glass-hover-veil-top: rgb(0 0 0 / 0.05);
+    --glass-hover-veil-bottom: rgb(0 0 0 / 0.04);
+  }
+
+  /* Explicit override: pinned dark regardless of the system setting. */
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --glass-hover-veil-top: rgb(255 255 255 / 0.12);
+    --glass-hover-veil-bottom: rgb(255 255 255 / 0.07);
   }
 }
 
@@ -454,9 +481,13 @@
   }
 
   /* The creation row under the header: the new-document button takes
-     the full remaining width, the new-folder button is a fixed square
-     at its side. Both carry a hairline border and rounded corners, the
-     document button tinted with the accent so it reads as primary. */
+     the full remaining width, the new-folder button is a fixed capsule
+     at its side. Both are macOS "liquid glass" pills: fully rounded,
+     translucent over the sidebar's vibrancy with their own backdrop
+     blur, a bright hairline along the top edge (the light catch that
+     reads as glass) and a soft drop shadow that lifts them off the
+     rail. Both share the one neutral glass recipe, so the pair reads
+     as a matched set rather than primary + secondary. */
   .sidebar-actions {
     display: flex;
     align-items: stretch;
@@ -470,24 +501,77 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
-    min-height: 2.25rem;
-    padding: 0 0.75rem;
-    border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
-    border-radius: 8px;
-    background: var(--accent-bg);
+    gap: 0.6rem;
+    min-height: 2.75rem;
+    padding: 0 1.15rem;
+    border: 1px solid rgb(255 255 255 / 0.18);
+    border-radius: 999px;
+    /* Apple's liquid glass, not frosted glass: the fill is nearly
+       nothing - a ghost of white so the backdrop flows through - and
+       the story is told by the blur and the light. A wide blur melts
+       the rail behind the pill, and a specular rim wraps the inside
+       edge: bright at the top where light enters, cooler along the
+       bottom, like the capsule in Apple's liquid-glass material. */
+    background: linear-gradient(
+      to bottom,
+      rgb(255 255 255 / 0.08),
+      rgb(255 255 255 / 0.02) 45%,
+      rgb(255 255 255 / 0.05)
+    );
     color: var(--text-primary);
     font-size: 0.8125rem;
     font-weight: 600;
     white-space: nowrap;
     cursor: pointer;
+    box-shadow:
+      inset 0 1.5px 1px -0.5px rgb(255 255 255 / 0.55),
+      inset 0 -1px 1px -0.5px rgb(255 255 255 / 0.28),
+      inset 0 0 0 1px rgb(255 255 255 / 0.1),
+      0 1px 2px rgb(0 0 0 / 0.08),
+      0 6px 16px rgb(0 0 0 / 0.08);
+    backdrop-filter: blur(24px) saturate(1.8);
+    -webkit-backdrop-filter: blur(24px) saturate(1.8);
     transition:
-      background 100ms ease,
-      border-color 100ms ease;
+      background 120ms ease,
+      border-color 120ms ease,
+      box-shadow 120ms ease,
+      transform 120ms ease;
   }
 
   .sidebar-actions .sidebar-new-button:hover:not(:disabled) {
-    background: var(--hover-strong);
+    /* The hover veil rides on top of the same base sheen: it darkens
+       the pill in light mode (like native controls) and brightens it
+       in dark mode, so the effect is visible on both surfaces. The
+       rim catches a little more light, too. */
+    background:
+      linear-gradient(
+        to bottom,
+        var(--glass-hover-veil-top),
+        var(--glass-hover-veil-bottom)
+      ),
+      linear-gradient(
+        to bottom,
+        rgb(255 255 255 / 0.08),
+        rgb(255 255 255 / 0.02) 45%,
+        rgb(255 255 255 / 0.05)
+      );
+    border-color: rgb(255 255 255 / 0.28);
+    box-shadow:
+      inset 0 1.5px 1px -0.5px rgb(255 255 255 / 0.7),
+      inset 0 -1px 1px -0.5px rgb(255 255 255 / 0.35),
+      inset 0 0 0 1px rgb(255 255 255 / 0.14),
+      0 1px 2px rgb(0 0 0 / 0.08),
+      0 6px 16px rgb(0 0 0 / 0.1);
+  }
+
+  .sidebar-actions .sidebar-new-button:active:not(:disabled) {
+    /* Pressing sinks the pill: the rim dims, the fill goes almost
+       clear and the shadow pulls in - glass pressed against the rail. */
+    transform: scale(0.98);
+    box-shadow:
+      inset 0 1px 1px -0.5px rgb(255 255 255 / 0.35),
+      inset 0 0 0 1px rgb(255 255 255 / 0.08),
+      0 1px 2px rgb(0 0 0 / 0.08);
   }
 
   .sidebar-actions .sidebar-new-button:disabled {
@@ -510,22 +594,64 @@
     flex: none;
     display: grid;
     place-items: center;
-    width: 2.25rem;
-    min-height: 2.25rem;
+    width: 2.75rem;
+    min-height: 2.75rem;
     padding: 0;
-    border: 1px solid var(--separator);
-    border-radius: 8px;
-    background: transparent;
+    border: 1px solid rgb(255 255 255 / 0.18);
+    border-radius: 999px;
+    background: linear-gradient(
+      to bottom,
+      rgb(255 255 255 / 0.08),
+      rgb(255 255 255 / 0.02) 45%,
+      rgb(255 255 255 / 0.05)
+    );
     color: var(--text-secondary);
     cursor: pointer;
+    box-shadow:
+      inset 0 1.5px 1px -0.5px rgb(255 255 255 / 0.55),
+      inset 0 -1px 1px -0.5px rgb(255 255 255 / 0.28),
+      inset 0 0 0 1px rgb(255 255 255 / 0.1),
+      0 1px 2px rgb(0 0 0 / 0.08),
+      0 6px 16px rgb(0 0 0 / 0.08);
+    backdrop-filter: blur(24px) saturate(1.8);
+    -webkit-backdrop-filter: blur(24px) saturate(1.8);
     transition:
-      background 100ms ease,
-      color 100ms ease;
+      background 120ms ease,
+      color 120ms ease,
+      border-color 120ms ease,
+      box-shadow 120ms ease,
+      transform 120ms ease;
   }
 
   .sidebar-actions .sidebar-new-folder-button:hover:not(:disabled) {
-    background: var(--hover-strong);
+    background:
+      linear-gradient(
+        to bottom,
+        var(--glass-hover-veil-top),
+        var(--glass-hover-veil-bottom)
+      ),
+      linear-gradient(
+        to bottom,
+        rgb(255 255 255 / 0.08),
+        rgb(255 255 255 / 0.02) 45%,
+        rgb(255 255 255 / 0.05)
+      );
+    border-color: rgb(255 255 255 / 0.28);
+    box-shadow:
+      inset 0 1.5px 1px -0.5px rgb(255 255 255 / 0.7),
+      inset 0 -1px 1px -0.5px rgb(255 255 255 / 0.35),
+      inset 0 0 0 1px rgb(255 255 255 / 0.14),
+      0 1px 2px rgb(0 0 0 / 0.08),
+      0 6px 16px rgb(0 0 0 / 0.1);
     color: var(--text-primary);
+  }
+
+  .sidebar-actions .sidebar-new-folder-button:active:not(:disabled) {
+    transform: scale(0.96);
+    box-shadow:
+      inset 0 1px 1px -0.5px rgb(255 255 255 / 0.35),
+      inset 0 0 0 1px rgb(255 255 255 / 0.08),
+      0 1px 2px rgb(0 0 0 / 0.08);
   }
 
   .sidebar-actions .sidebar-new-folder-button:disabled {
@@ -536,6 +662,46 @@
   .sidebar-actions .sidebar-new-folder-button svg {
     width: 1rem;
     height: 1rem;
+  }
+
+  /* Shared glass tooltip: one bubble for the glass buttons, appended
+     to <body> and fixed-positioned by JS (see the sidebar view) so it
+     floats under - or above, if the space below runs out - the hovered
+     button, clamped inside the window. Never a child of the button,
+     so it can't overlap the list the way an anchored bubble did. */
+  .glass-tooltip {
+    position: fixed;
+    z-index: 100;
+    padding: 0.3rem 0.65rem;
+    border: 1px solid rgb(255 255 255 / 0.18);
+    border-radius: 0.6rem;
+    background: linear-gradient(
+      to bottom,
+      rgb(40 40 44 / 0.85),
+      rgb(28 28 30 / 0.85)
+    );
+    color: #f5f5f7;
+    font-family: ui-sans-serif, -apple-system, system-ui, sans-serif;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(-3px);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.25),
+      0 4px 12px rgb(0 0 0 / 0.25);
+    backdrop-filter: blur(16px) saturate(1.6);
+    -webkit-backdrop-filter: blur(16px) saturate(1.6);
+    transition:
+      opacity 140ms ease,
+      transform 140ms ease;
+  }
+
+  .glass-tooltip--visible {
+    opacity: 1;
+    transform: translateY(0);
   }
 
   .sidebar-list {
@@ -1093,6 +1259,8 @@
     .titlebar-controls,
     .titlebar-controls button,
     .sidebar-new-button.sidebar-new-button--hidden-rail,
+    .sidebar-actions .sidebar-new-button,
+    .sidebar-actions .sidebar-new-folder-button,
     .status-bar {
       transition: none !important;
     }
