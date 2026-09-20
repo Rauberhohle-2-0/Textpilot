@@ -23,6 +23,12 @@ export default defineConfig({
     // native buttons are back.)
     titleBarStyle: 'hidden',
     titleBarHeight: 36,
+    // Native traffic lights, parked inside the floating sidebar's chrome
+    // row: panel left edge (12px float gap) + chrome padding (~12.8px) +
+    // a small inset. `y` drops them below the panel's top border into
+    // the chrome band (centered-in-bar would straddle the border and
+    // look clipped). Capped by AppKit's button container if too large.
+    trafficLightPosition: { x: 28, y: 22 },
   },
   permissions: {
     network: {

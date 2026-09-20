@@ -51,7 +51,6 @@
   --blockquote-text: #6e6e73;
   --link: #007aff;
   --mark-bg: rgb(255 214 10 / 0.45);
-  --toolbar-bg: rgb(255 255 255 / 0.78);
   --status-gradient: linear-gradient(to top, rgb(255 255 255 / 0.92), transparent);
   --rename-bg: #ffffff;
   --placeholder: #aeaeb2;
@@ -61,14 +60,74 @@
      hover veil. In light mode glass sits on a bright surface, so the
      base is whiter and hover darkens (like native controls); in dark
      mode hover brightens. Gradients can't ride a var() alone, so the
-     two stops of the hover veil are the token pair. */
+     two stops of the hover veil are the token pair. The border tokens
+     keep the capsule edge a quiet step off the rail per theme. */
   --glass-hover-veil-top: rgb(0 0 0 / 0.05);
   --glass-hover-veil-bottom: rgb(0 0 0 / 0.04);
+  --glass-border: rgb(0 0 0 / 0.35);
+  --glass-border-hover: rgb(0 0 0 / 0.45);
+  /* Floating sidebar panel: neutral frosted glass, dark text. */
+  --panel-glass: linear-gradient(
+    to bottom,
+    rgb(255 255 255 / 0.34),
+    rgb(244 244 248 / 0.26) 40%,
+    rgb(238 238 244 / 0.3)
+  );
+  --panel-fg: #1d1d1f;
+  --panel-fg-dim: rgb(29 29 31 / 0.62);
+  --panel-fg-faint: rgb(29 29 31 / 0.42);
+  --panel-hover: rgb(0 0 0 / 0.06);
+  --panel-selected: rgb(0 0 0 / 0.1);
+  --panel-selected-fg: #1d1d1f;
+  --panel-hairline: rgb(0 0 0 / 0.1);
+  --panel-border: rgb(0 0 0 / 0.12);
+  --panel-chrome-btn: rgb(29 29 31 / 0.62);
+  --panel-footer-bg: rgb(255 255 255 / 0.16);
+  --panel-pill-bg: linear-gradient(to bottom, rgb(255 255 255 / 0.5), rgb(255 255 255 / 0.18));
+  --panel-pill-fg: #1d1d1f;
+  --panel-pill-border: rgb(0 0 0 / 0.14);
+  --panel-scroll-thumb: rgb(0 0 0 / 0.18);
+  --panel-rename-bg: rgb(255 255 255 / 0.75);
+  --panel-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.7),
+    inset 0 0 0 1px rgb(255 255 255 / 0.25),
+    0 24px 64px rgb(0 0 0 / 0.22),
+    0 2px 12px rgb(0 0 0 / 0.12);
 }
 
 /* Explicit override: pinned light regardless of the system setting. */
 :root[data-theme="light"] {
   color-scheme: light;
+  --glass-hover-veil-top: rgb(0 0 0 / 0.05);
+  --glass-hover-veil-bottom: rgb(0 0 0 / 0.04);
+  --glass-border: rgb(0 0 0 / 0.35);
+  --glass-border-hover: rgb(0 0 0 / 0.45);
+  --panel-glass: linear-gradient(
+    to bottom,
+    rgb(255 255 255 / 0.34),
+    rgb(244 244 248 / 0.26) 40%,
+    rgb(238 238 244 / 0.3)
+  );
+  --panel-fg: #1d1d1f;
+  --panel-fg-dim: rgb(29 29 31 / 0.62);
+  --panel-fg-faint: rgb(29 29 31 / 0.42);
+  --panel-hover: rgb(0 0 0 / 0.06);
+  --panel-selected: rgb(0 0 0 / 0.1);
+  --panel-selected-fg: #1d1d1f;
+  --panel-hairline: rgb(0 0 0 / 0.1);
+  --panel-border: rgb(0 0 0 / 0.12);
+  --panel-chrome-btn: rgb(29 29 31 / 0.62);
+  --panel-footer-bg: rgb(255 255 255 / 0.16);
+  --panel-pill-bg: linear-gradient(to bottom, rgb(255 255 255 / 0.5), rgb(255 255 255 / 0.18));
+  --panel-pill-fg: #1d1d1f;
+  --panel-pill-border: rgb(0 0 0 / 0.14);
+  --panel-scroll-thumb: rgb(0 0 0 / 0.18);
+  --panel-rename-bg: rgb(255 255 255 / 0.75);
+  --panel-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.7),
+    inset 0 0 0 1px rgb(255 255 255 / 0.25),
+    0 24px 64px rgb(0 0 0 / 0.22),
+    0 2px 12px rgb(0 0 0 / 0.12);
 }
 
 /* Explicit override: pinned dark regardless of the system setting. */
@@ -94,7 +153,6 @@
   --blockquote-text: #a1a1a6;
   --link: #0a84ff;
   --mark-bg: rgb(255 214 10 / 0.3);
-  --toolbar-bg: rgb(40 40 42 / 0.82);
   --status-gradient: linear-gradient(to top, rgb(30 30 30 / 0.92), transparent);
   --rename-bg: rgb(0 0 0 / 0.35);
   --placeholder: #636366;
@@ -102,6 +160,35 @@
   --selection-bg: rgb(10 132 255 / 0.35);
   --glass-hover-veil-top: rgb(255 255 255 / 0.12);
   --glass-hover-veil-bottom: rgb(255 255 255 / 0.07);
+  --glass-border: rgb(0 0 0 / 0.55);
+  --glass-border-hover: rgb(0 0 0 / 0.7);
+  /* Floating sidebar panel: neutral frosted glass, light text. */
+  --panel-glass: linear-gradient(
+    to bottom,
+    rgb(48 48 52 / 0.34),
+    rgb(30 30 34 / 0.3) 40%,
+    rgb(20 20 23 / 0.34)
+  );
+  --panel-fg: rgb(245 245 247 / 0.94);
+  --panel-fg-dim: rgb(245 245 247 / 0.66);
+  --panel-fg-faint: rgb(245 245 247 / 0.44);
+  --panel-hover: rgb(255 255 255 / 0.09);
+  --panel-selected: rgb(255 255 255 / 0.17);
+  --panel-selected-fg: #ffffff;
+  --panel-hairline: rgb(255 255 255 / 0.12);
+  --panel-border: rgb(255 255 255 / 0.15);
+  --panel-chrome-btn: rgb(245 245 247 / 0.72);
+  --panel-footer-bg: rgb(255 255 255 / 0.06);
+  --panel-pill-bg: linear-gradient(to bottom, rgb(255 255 255 / 0.1), rgb(255 255 255 / 0.03));
+  --panel-pill-fg: #ffffff;
+  --panel-pill-border: rgb(255 255 255 / 0.2);
+  --panel-scroll-thumb: rgb(255 255 255 / 0.22);
+  --panel-rename-bg: rgb(0 0 0 / 0.5);
+  --panel-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.2),
+    inset 0 0 0 1px rgb(0 0 0 / 0.22),
+    0 24px 64px rgb(0 0 0 / 0.48),
+    0 2px 12px rgb(0 0 0 / 0.32);
 }
 
 /* Explicit override: pinned light regardless of the system setting. */
@@ -109,6 +196,8 @@
   color-scheme: light;
   --glass-hover-veil-top: rgb(0 0 0 / 0.05);
   --glass-hover-veil-bottom: rgb(0 0 0 / 0.04);
+  --glass-border: rgb(0 0 0 / 0.35);
+  --glass-border-hover: rgb(0 0 0 / 0.45);
 }
 
 /* System preference: dark, unless pinned light via [data-theme]. */
@@ -143,20 +232,37 @@
     --selection-bg: rgb(10 132 255 / 0.35);
     --glass-hover-veil-top: rgb(255 255 255 / 0.12);
     --glass-hover-veil-bottom: rgb(255 255 255 / 0.07);
-  }
-
-  /* Explicit override: pinned light regardless of the system setting. */
-  :root[data-theme="light"] {
-    color-scheme: light;
-    --glass-hover-veil-top: rgb(0 0 0 / 0.05);
-    --glass-hover-veil-bottom: rgb(0 0 0 / 0.04);
-  }
-
-  /* Explicit override: pinned dark regardless of the system setting. */
-  :root[data-theme="dark"] {
-    color-scheme: dark;
-    --glass-hover-veil-top: rgb(255 255 255 / 0.12);
-    --glass-hover-veil-bottom: rgb(255 255 255 / 0.07);
+    /* Dark-mode glass border: dark like the user asked for - a deeper
+       step than the light-mode values, sitting between the rail and
+       pure black so the edge reads without going hollow. */
+    --glass-border: rgb(0 0 0 / 0.55);
+    --glass-border-hover: rgb(0 0 0 / 0.7);
+    --panel-glass: linear-gradient(
+      to bottom,
+      rgb(48 48 52 / 0.34),
+      rgb(30 30 34 / 0.3) 40%,
+      rgb(20 20 23 / 0.34)
+    );
+    --panel-fg: rgb(245 245 247 / 0.94);
+    --panel-fg-dim: rgb(245 245 247 / 0.66);
+    --panel-fg-faint: rgb(245 245 247 / 0.44);
+    --panel-hover: rgb(255 255 255 / 0.09);
+    --panel-selected: rgb(255 255 255 / 0.17);
+    --panel-selected-fg: #ffffff;
+    --panel-hairline: rgb(255 255 255 / 0.12);
+    --panel-border: rgb(255 255 255 / 0.15);
+    --panel-chrome-btn: rgb(245 245 247 / 0.72);
+    --panel-footer-bg: rgb(255 255 255 / 0.06);
+    --panel-pill-bg: linear-gradient(to bottom, rgb(255 255 255 / 0.1), rgb(255 255 255 / 0.03));
+    --panel-pill-fg: #ffffff;
+    --panel-pill-border: rgb(255 255 255 / 0.2);
+    --panel-scroll-thumb: rgb(255 255 255 / 0.22);
+    --panel-rename-bg: rgb(0 0 0 / 0.5);
+    --panel-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.2),
+      inset 0 0 0 1px rgb(0 0 0 / 0.22),
+      0 24px 64px rgb(0 0 0 / 0.48),
+      0 2px 12px rgb(0 0 0 / 0.32);
   }
 }
 
@@ -208,68 +314,74 @@
     -webkit-user-select: none;
   }
 
-  /* The sidebar: the Finder-style left rail. Slightly darker than the
-     editor surface so the document reads as the lit part of the window,
-     with the same accent the toolbar uses for selection. Collapse
-     animates the width itself (not display:none) so the editor column
-     breathes open fluidly, Mail/Notes-style. */
+  /* The sidebar: floating dark-glass panel like the picture. An
+     overlay inset from the window edges with big rounded corners, a
+     chrome row (traffic lights left, toggle right), the live
+     document/folder list, and a footer with creation + appearance.
+     Collapse slides the whole card off-screen instead of squeezing its
+     width, so the editor underneath never reflows. */
   :root {
-    --sidebar-width: 13.5rem;
+    --sidebar-width: 17rem;
     --sidebar-collapse-duration: 300ms;
     --sidebar-collapse-ease: cubic-bezier(0.32, 0.72, 0, 1);
+    --sidebar-float-gap: 0.75rem;
+    /* Concentric corners: the panel's radius is the window's outer
+       radius minus the float gap, so the two curves nest with a uniform
+       gap instead of pinching at the diagonal. Bump --window-radius if
+       the native frame measures differently. */
+    --window-radius: 1.375rem;
+    --sidebar-radius: calc(var(--window-radius) - var(--sidebar-float-gap));
   }
 
   .sidebar {
-    flex: none;
-    width: var(--sidebar-width, 13.5rem);
-    height: 100%;
+    position: fixed;
+    top: var(--sidebar-float-gap);
+    left: var(--sidebar-float-gap);
+    bottom: var(--sidebar-float-gap);
+    width: var(--sidebar-width, 17rem);
     display: flex;
     flex-direction: column;
-    position: relative;
     overflow: hidden;
-    /* The rail is the full window height - the traffic lights float
-       over its top band - so the title bar and the sidebar blend into
-       one surface instead of stacking as two strips. Horizontal padding
-       lives on the scroll body and footer, not the rail, so the footer
-       hairline and the collapse animation span the full width. */
-    padding: 0 0 0.25rem;
-    background: var(--sidebar-bg);
-    /* Subtle frosted glass: translucent fill + backdrop blur and
-       saturation, the same recipe as the floating toolbar. */
-    backdrop-filter: blur(20px) saturate(1.8);
-    -webkit-backdrop-filter: blur(20px) saturate(1.8);
-    border-right: 1px solid var(--separator);
+    padding: 0;
+    /* Picture recipe: sheer vibrancy - a thin tint over a heavy blur so
+       the document text behind ghosts through. Theme-aware via
+       --panel-* tokens: bright glass + dark text in light mode, warm
+       dark glass + light text in dark mode. */
+    background: var(--panel-glass);
+    backdrop-filter: blur(46px) saturate(2);
+    -webkit-backdrop-filter: blur(46px) saturate(2);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--sidebar-radius);
+    box-shadow: var(--panel-shadow);
+    color: var(--panel-fg);
     font-family: ui-sans-serif, -apple-system, system-ui, sans-serif;
     user-select: none;
     -webkit-user-select: none;
+    z-index: 50;
     transform: translateZ(0);
     transition:
-      width var(--sidebar-collapse-duration) var(--sidebar-collapse-ease),
-      padding var(--sidebar-collapse-duration) var(--sidebar-collapse-ease),
-      border-color var(--sidebar-collapse-duration) var(--sidebar-collapse-ease),
+      transform var(--sidebar-collapse-duration) var(--sidebar-collapse-ease),
+      opacity 200ms ease-out,
       visibility 0s linear 0s;
   }
 
-  /* No backdrop-filter (older browsers): fall back to the solid
-     source-list fill so the rail never turns sheer-transparent. */
+  /* No backdrop-filter (older browsers): fall back per theme so the
+     panel never turns sheer-transparent. */
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-    :root {
-      --sidebar-bg: #ececee;
+    .sidebar {
+      background: rgb(242 242 246 / 0.96);
     }
-    :root[data-theme="dark"] {
-      --sidebar-bg: #2b2b2e;
+    :root[data-theme="dark"] .sidebar {
+      background: #1c1c1f;
     }
     @media (prefers-color-scheme: dark) {
-      :root:not([data-theme="light"]) {
-        --sidebar-bg: #2b2b2e;
+      :root:not([data-theme="light"]) .sidebar {
+        background: #1c1c1f;
       }
     }
   }
 
-  /* The scrollable body below the drag band; the band itself stays
-     fixed so the traffic lights keep their place at any height. The
-     content fades and drifts slightly ahead of the width collapse so
-     text never looks squished while the rail narrows. */
+  /* The scrollable body between the chrome and the footer. */
   .sidebar-scroll {
     flex: 1;
     min-height: 0;
@@ -277,21 +389,27 @@
     overflow-x: hidden;
     display: flex;
     flex-direction: column;
-    padding: 0 0.5rem;
+    padding: 0.25rem 0.6rem;
     opacity: 1;
-    transform: translateX(0);
-    transition:
-      opacity 160ms ease-out,
-      transform var(--sidebar-collapse-duration) var(--sidebar-collapse-ease);
+    scrollbar-width: thin;
+    scrollbar-color: var(--panel-scroll-thumb) transparent;
   }
 
-  /* The resize handle: an invisible strip on the rail's edge that
-     lights up on hover/drag, the way native separators do. */
+  .sidebar-scroll::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .sidebar-scroll::-webkit-scrollbar-thumb {
+    background: var(--panel-scroll-thumb);
+    border-radius: 4px;
+  }
+
+  /* The resize handle: an invisible strip on the panel's right edge. */
   .sidebar-resize-handle {
     position: absolute;
     top: 0;
-    right: -3px;
-    width: 7px;
+    right: -4px;
+    width: 9px;
     height: 100%;
     cursor: col-resize;
     z-index: 30;
@@ -303,19 +421,20 @@
   .sidebar-resize-handle::after {
     content: "";
     position: absolute;
-    top: 0;
-    right: 3px;
+    top: 12px;
+    bottom: 12px;
+    right: 4px;
     width: 1px;
-    height: 100%;
+    border-radius: 1px;
     background: transparent;
     transition: background 120ms ease;
   }
 
   .sidebar-resize-handle:hover::after,
   body.sidebar-resizing .sidebar-resize-handle::after {
-    background: var(--accent);
+    background: var(--panel-fg-faint);
     width: 2px;
-    right: 2.5px;
+    right: 3.5px;
   }
 
   /* While dragging: no text selection anywhere, and the cursor stays
@@ -330,39 +449,38 @@
 
   body.sidebar-resizing .sidebar,
   body.sidebar-resizing .titlebar-controls,
-  body.sidebar-resizing .status-bar {
+  body.sidebar-resizing .status-bar,
+  body.sidebar-resizing .editor-column {
     transition: none !important;
   }
 
-  /* Hidden state: the rail's width eases to zero while the editor
-     column (flex-1) fills the window; the status bar's left inset
-     glides with the same curve. Visibility flips only after the
-     collapse so the rail leaves the tab order without cutting the
-     animation short. */
-  body.sidebar-hidden .sidebar {
-    width: 0;
-    min-width: 0;
-    /* The rail's side padding is outside `width` (content-box), so it
-       must collapse too - otherwise a ~19px background sliver survives
-       the width animation and only blinks out when `visibility` flips
-       after its delay, reading as the background finishing late. */
+  /* The editor column sits *beside* the floating panel, never under
+     it: its left offset tracks the panel width + both float gaps, and
+     eases with the same spring on collapse/expand and live resize.
+     Hidden panel = full-width text. The offset lives on the column
+     (not .editor) so the toolbar's `left: 50%` centers on the visible
+     area - padding on .editor would leave its padding box full-width
+     and the toolbar off-center. */
+  .editor-column {
+    padding-left: calc(var(--sidebar-width, 17rem) + var(--sidebar-float-gap, 0.75rem) * 2);
+    transition: padding-left var(--sidebar-collapse-duration) var(--sidebar-collapse-ease);
+  }
+
+  body.sidebar-hidden .editor-column {
     padding-left: 0;
-    padding-right: 0;
-    border-right-color: transparent;
+  }
+
+  /* Hidden state: the whole card glides off-screen left and fades. The
+     editor underneath is already full-width (overlay), so nothing
+     reflows - the document is simply uncovered. */
+  body.sidebar-hidden .sidebar {
+    transform: translateX(calc(-100% - var(--sidebar-float-gap) - 12px));
+    opacity: 0;
     visibility: hidden;
     transition:
-      width var(--sidebar-collapse-duration) var(--sidebar-collapse-ease),
-      padding var(--sidebar-collapse-duration) var(--sidebar-collapse-ease),
-      border-color var(--sidebar-collapse-duration) var(--sidebar-collapse-ease),
+      transform var(--sidebar-collapse-duration) var(--sidebar-collapse-ease),
+      opacity 200ms ease-out,
       visibility 0s linear var(--sidebar-collapse-duration);
-  }
-
-  body.sidebar-hidden .sidebar-scroll {
-    opacity: 0;
-  }
-
-  body.sidebar-hidden .sidebar-scroll {
-    transform: translateX(-14px);
   }
 
   body.sidebar-hidden .sidebar-resize-handle {
@@ -374,87 +492,108 @@
     left: 0;
   }
 
-  /* The title-bar controls over the editor column: the panel toggle,
-     the appearance switch, plus a new-document twin that only appears
-     while the rail is hidden. One fixed row, never inside the sidebar,
-     so the rail's top stays clean under the traffic lights, the way
-     Finder and Notes keep it. The row glides with the rail's edge on
-     the same spring as the collapse, and parks at the window inset
-     once the rail is gone. Ghost squares with a hover fill, matching
-     the sidebar's own buttons.
+  /* The reopen bar: only while the panel is hidden - a small floating
+     glass pill top-left with the toggle + quick new-document. Hidden
+     entirely while the panel is open (its toggle lives in the chrome).
      (The twin needs both class names: its selector must outrank the
      in-flow wide-button rule, or that rule keeps it visible.) */
   .titlebar-controls {
     position: fixed;
-    top: calc((var(--vantail-titlebar-height, 36px) - 1.5rem) / 2);
-    left: calc(var(--sidebar-width, 13.5rem) + 0.5rem);
+    top: var(--sidebar-float-gap);
+    left: var(--sidebar-float-gap);
     z-index: 40;
-    display: flex;
+    display: none;
     align-items: center;
-    gap: 0.1rem;
-    transition: left var(--sidebar-collapse-duration) var(--sidebar-collapse-ease);
+    gap: 0.25rem;
+    padding: 0.35rem 0.45rem;
+    border: 1px solid var(--panel-border);
+    border-radius: 0.9rem;
+    background: var(--panel-glass);
+    backdrop-filter: blur(36px) saturate(1.8);
+    -webkit-backdrop-filter: blur(36px) saturate(1.8);
+    box-shadow: var(--panel-shadow);
+  }
+
+  body.sidebar-hidden .titlebar-controls {
+    display: flex;
   }
 
   .titlebar-controls button {
     display: grid;
     place-items: center;
-    width: 1.5rem;
-    height: 1.5rem;
+    width: 2rem;
+    height: 2rem;
     padding: 0;
     border: 0;
-    border-radius: 5px;
+    border-radius: 8px;
     background: transparent;
-    color: var(--text-secondary);
+    color: var(--panel-fg-dim);
     cursor: pointer;
     transition:
       background 100ms ease,
       color 100ms ease;
   }
 
-  /* The theme slot is only a mount point: contents render the button
-     itself as a row item, so gaps stay even. Empty, it takes no space. */
-  .titlebar-theme-slot {
-    display: contents;
-  }
-
-  .titlebar-theme-slot:empty {
-    display: none;
-  }
-
-  /* Parked until the rail goes away: takes no space and leaves the tab
-     order, so the open rail shows toggle + theme only. */
   .sidebar-new-button.sidebar-new-button--hidden-rail {
-    display: none;
-  }
-
-  body.sidebar-hidden .titlebar-controls {
-    left: calc(var(--vantail-titlebar-inset-left, 0px) + 0.5rem);
-  }
-
-  body.sidebar-hidden .sidebar-new-button--hidden-rail {
     display: grid;
   }
 
   .titlebar-controls button:hover {
-    background: var(--hover-strong);
-    color: var(--text-primary);
+    background: var(--panel-hover);
+    color: var(--panel-fg);
   }
 
   .titlebar-controls button svg {
-    width: 1rem;
-    height: 1rem;
+    width: 1.1rem;
+    height: 1.1rem;
   }
 
-  /* The band the traffic lights float over: fixed height, non-scrolling
-     (the section below scrolls), and empty so the runtime gets the
-     press for window dragging - same contract as the titlebar-spacer. */
-  .sidebar-drag-band {
+  /* The floating chrome: native traffic lights on the left (parked
+     here via `trafficLightPosition`, drawn by the system), toggle on
+     the right. Non-scrolling, and the window-drag surface. */
+  .sidebar-chrome {
     flex: none;
-    height: calc(var(--vantail-titlebar-height, 36px) + 0.4rem);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0.55rem 0.8rem;
+    /* Keep the row clear of the native lights parked at the left. */
+    padding-left: var(--vantail-titlebar-inset-left, 0.8rem);
     margin: 0;
     position: relative;
     user-select: none;
     -webkit-user-select: none;
+  }
+
+  .sidebar-chrome .sidebar-toggle {
+    display: grid;
+    place-items: center;
+    width: 1.9rem;
+    height: 1.9rem;
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--panel-chrome-btn);
+    cursor: pointer;
+    transition:
+      background 120ms ease,
+      color 120ms ease;
+  }
+
+  .sidebar-chrome .sidebar-toggle:hover {
+    background: var(--panel-hover);
+    color: var(--panel-fg);
+  }
+
+  .sidebar-chrome .sidebar-toggle svg {
+    width: 1.15rem;
+    height: 1.15rem;
+  }
+
+  /* Legacy drag band selector kept for compat (no longer rendered). */
+  .sidebar-drag-band {
+    display: none;
   }
 
   .sidebar-section {
@@ -463,115 +602,105 @@
     gap: 0.15rem;
   }
 
-  /* Source-list header: the title only. Toggle and appearance live in
-     the title-bar controls over the editor column; the wide
-     new-document button + new-folder square sit in the row below. */
+  /* Legacy header selectors kept for compat (label no longer rendered). */
   .sidebar-header {
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.45rem 0.3rem 0.25rem 0.35rem;
+    display: none;
   }
 
   .sidebar-header-label {
-    font-size: 0.9375rem; /* 15px */
-    font-weight: 700;
-    color: var(--text-primary);
-    letter-spacing: -0.01em;
+    display: none;
   }
 
-  /* The creation row under the header: the new-document button takes
-     the full remaining width, the new-folder button is a fixed capsule
-     at its side. Both are macOS "liquid glass" pills: fully rounded,
-     translucent over the sidebar's vibrancy with their own backdrop
-     blur, a bright hairline along the top edge (the light catch that
-     reads as glass) and a soft drop shadow that lifts them off the
-     rail. Both share the one neutral glass recipe, so the pair reads
-     as a matched set rather than primary + secondary. */
+  /* The footer: creation row + appearance, pinned to the panel's
+     bottom under a hairline. Sheer so the blur shows through. */
+  .sidebar-footer {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.7rem 0.8rem 0.85rem;
+    border-top: 1px solid var(--panel-hairline);
+    /* Faint cool wash under the glass trio: refraction needs variance
+       behind it to bend, and the footer is otherwise flat. Subtle
+       enough to read as glass tint, not decoration. */
+    background:
+      linear-gradient(
+        120deg,
+        rgb(99 102 241 / 0.14),
+        rgb(168 85 247 / 0.08) 45%,
+        transparent 75%
+      ),
+      var(--panel-footer-bg);
+    backdrop-filter: blur(46px) saturate(2);
+    -webkit-backdrop-filter: blur(46px) saturate(2);
+  }
+
   .sidebar-actions {
+    flex: 1 1 auto;
+    min-width: 0;
     display: flex;
     align-items: stretch;
     gap: 0.5rem;
-    padding: 0.35rem 0.35rem 0.5rem;
   }
 
+  /* Liquid-glass footer buttons (reference: floating pill + circles).
+     Three layers: a diagonal sheen over the theme tint, a luminous rim
+     that traces the curve (::before, bright top-left fading around the
+     bend), and a specular top-light wash (::after) - over backdrop
+     blur, so content behind refracts through. */
   .sidebar-actions .sidebar-new-button {
+    position: relative;
     flex: 1 1 auto;
     min-width: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.6rem;
-    min-height: 2.75rem;
-    padding: 0 1.15rem;
-    border: 1px solid rgb(255 255 255 / 0.18);
+    gap: 0.55rem;
+    min-height: 2.5rem;
+    padding: 0 1rem;
+    border: 0;
     border-radius: 999px;
-    /* Apple's liquid glass, not frosted glass: the fill is nearly
-       nothing - a ghost of white so the backdrop flows through - and
-       the story is told by the blur and the light. A wide blur melts
-       the rail behind the pill, and a specular rim wraps the inside
-       edge: bright at the top where light enters, cooler along the
-       bottom, like the capsule in Apple's liquid-glass material. */
-    background: linear-gradient(
-      to bottom,
-      rgb(255 255 255 / 0.08),
-      rgb(255 255 255 / 0.02) 45%,
-      rgb(255 255 255 / 0.05)
-    );
-    color: var(--text-primary);
+    background:
+      linear-gradient(
+        155deg,
+        rgb(255 255 255 / 0.07),
+        rgb(255 255 255 / 0.02) 40%,
+        rgb(0 0 0 / 0.05)
+      ),
+      rgb(255 255 255 / 0.1);
+    color: var(--panel-pill-fg);
     font-size: 0.8125rem;
     font-weight: 600;
     white-space: nowrap;
     cursor: pointer;
+    text-shadow: 0 1px 2px rgb(0 0 0 / 0.18);
     box-shadow:
-      inset 0 1.5px 1px -0.5px rgb(255 255 255 / 0.55),
-      inset 0 -1px 1px -0.5px rgb(255 255 255 / 0.28),
-      inset 0 0 0 1px rgb(255 255 255 / 0.1),
-      0 1px 2px rgb(0 0 0 / 0.08),
-      0 6px 16px rgb(0 0 0 / 0.08);
-    backdrop-filter: blur(24px) saturate(1.8);
-    -webkit-backdrop-filter: blur(24px) saturate(1.8);
+      inset 0 0 2px 1px rgb(255 255 255 / 0.4),
+      inset 0 0 10px 4px rgb(255 255 255 / 0.16),
+      inset 0 4px 16px rgb(0 0 0 / 0.05),
+      inset 0 8px 24px rgb(0 0 0 / 0.05),
+      inset 0 1px 0 rgb(255 255 255 / 0.65),
+      inset 0 -3px 8px rgb(0 0 0 / 0.3),
+      0 8px 24px rgb(0 0 0 / 0.3);
+    /* Plain-blur fallback first; the SVG-refraction line wins where
+       renderers accept url() in backdrop-filter, and is dropped as a
+       whole declaration where they don't - leaving the blur above. */
+    backdrop-filter: blur(26px) saturate(2);
+    -webkit-backdrop-filter: blur(26px) saturate(2);
+    backdrop-filter: url(#textpilot-glass) saturate(1.8);
+    -webkit-backdrop-filter: url(#textpilot-glass) saturate(1.8);
     transition:
-      background 120ms ease,
-      border-color 120ms ease,
       box-shadow 120ms ease,
-      transform 120ms ease;
+      transform 120ms ease,
+      filter 120ms ease;
   }
 
   .sidebar-actions .sidebar-new-button:hover:not(:disabled) {
-    /* The hover veil rides on top of the same base sheen: it darkens
-       the pill in light mode (like native controls) and brightens it
-       in dark mode, so the effect is visible on both surfaces. The
-       rim catches a little more light, too. */
-    background:
-      linear-gradient(
-        to bottom,
-        var(--glass-hover-veil-top),
-        var(--glass-hover-veil-bottom)
-      ),
-      linear-gradient(
-        to bottom,
-        rgb(255 255 255 / 0.08),
-        rgb(255 255 255 / 0.02) 45%,
-        rgb(255 255 255 / 0.05)
-      );
-    border-color: rgb(255 255 255 / 0.28);
-    box-shadow:
-      inset 0 1.5px 1px -0.5px rgb(255 255 255 / 0.7),
-      inset 0 -1px 1px -0.5px rgb(255 255 255 / 0.35),
-      inset 0 0 0 1px rgb(255 255 255 / 0.14),
-      0 1px 2px rgb(0 0 0 / 0.08),
-      0 6px 16px rgb(0 0 0 / 0.1);
+    filter: brightness(1.1);
   }
 
   .sidebar-actions .sidebar-new-button:active:not(:disabled) {
-    /* Pressing sinks the pill: the rim dims, the fill goes almost
-       clear and the shadow pulls in - glass pressed against the rail. */
     transform: scale(0.98);
-    box-shadow:
-      inset 0 1px 1px -0.5px rgb(255 255 255 / 0.35),
-      inset 0 0 0 1px rgb(255 255 255 / 0.08),
-      0 1px 2px rgb(0 0 0 / 0.08);
   }
 
   .sidebar-actions .sidebar-new-button:disabled {
@@ -583,6 +712,7 @@
     width: 1rem;
     height: 1rem;
     flex: none;
+    filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.2));
   }
 
   .sidebar-new-label {
@@ -590,68 +720,72 @@
     text-overflow: ellipsis;
   }
 
+  /* Narrow panel: the wide new-document button collapses to an icon
+     square instead of squeezing the label into an ellipsis. */
+  .sidebar--compact .sidebar-actions {
+    justify-content: center;
+  }
+
+  .sidebar--compact .sidebar-actions .sidebar-new-button {
+    flex: none;
+    width: 2.5rem;
+    padding: 0;
+    gap: 0;
+  }
+
+  .sidebar--compact .sidebar-new-label {
+    display: none;
+  }
+
   .sidebar-actions .sidebar-new-folder-button {
+    position: relative;
     flex: none;
     display: grid;
     place-items: center;
-    width: 2.75rem;
-    min-height: 2.75rem;
+    width: 2.5rem;
+    min-height: 2.5rem;
     padding: 0;
-    border: 1px solid rgb(255 255 255 / 0.18);
+    border: 0;
     border-radius: 999px;
-    background: linear-gradient(
-      to bottom,
-      rgb(255 255 255 / 0.08),
-      rgb(255 255 255 / 0.02) 45%,
-      rgb(255 255 255 / 0.05)
-    );
-    color: var(--text-secondary);
+    background:
+      linear-gradient(
+        155deg,
+        rgb(255 255 255 / 0.07),
+        rgb(255 255 255 / 0.02) 40%,
+        rgb(0 0 0 / 0.05)
+      ),
+      rgb(255 255 255 / 0.1);
+    color: var(--panel-fg-dim);
     cursor: pointer;
     box-shadow:
-      inset 0 1.5px 1px -0.5px rgb(255 255 255 / 0.55),
-      inset 0 -1px 1px -0.5px rgb(255 255 255 / 0.28),
-      inset 0 0 0 1px rgb(255 255 255 / 0.1),
-      0 1px 2px rgb(0 0 0 / 0.08),
-      0 6px 16px rgb(0 0 0 / 0.08);
-    backdrop-filter: blur(24px) saturate(1.8);
-    -webkit-backdrop-filter: blur(24px) saturate(1.8);
+      inset 0 0 2px 1px rgb(255 255 255 / 0.4),
+      inset 0 0 10px 4px rgb(255 255 255 / 0.16),
+      inset 0 4px 16px rgb(0 0 0 / 0.05),
+      inset 0 8px 24px rgb(0 0 0 / 0.05),
+      inset 0 1px 0 rgb(255 255 255 / 0.65),
+      inset 0 -3px 8px rgb(0 0 0 / 0.3),
+      0 8px 24px rgb(0 0 0 / 0.3);
+    /* Plain-blur fallback first; the SVG-refraction line wins where
+       renderers accept url() in backdrop-filter, and is dropped as a
+       whole declaration where they don't - leaving the blur above. */
+    backdrop-filter: blur(26px) saturate(2);
+    -webkit-backdrop-filter: blur(26px) saturate(2);
+    backdrop-filter: url(#textpilot-glass) saturate(1.8);
+    -webkit-backdrop-filter: url(#textpilot-glass) saturate(1.8);
     transition:
-      background 120ms ease,
       color 120ms ease,
-      border-color 120ms ease,
       box-shadow 120ms ease,
-      transform 120ms ease;
+      transform 120ms ease,
+      filter 120ms ease;
   }
 
   .sidebar-actions .sidebar-new-folder-button:hover:not(:disabled) {
-    background:
-      linear-gradient(
-        to bottom,
-        var(--glass-hover-veil-top),
-        var(--glass-hover-veil-bottom)
-      ),
-      linear-gradient(
-        to bottom,
-        rgb(255 255 255 / 0.08),
-        rgb(255 255 255 / 0.02) 45%,
-        rgb(255 255 255 / 0.05)
-      );
-    border-color: rgb(255 255 255 / 0.28);
-    box-shadow:
-      inset 0 1.5px 1px -0.5px rgb(255 255 255 / 0.7),
-      inset 0 -1px 1px -0.5px rgb(255 255 255 / 0.35),
-      inset 0 0 0 1px rgb(255 255 255 / 0.14),
-      0 1px 2px rgb(0 0 0 / 0.08),
-      0 6px 16px rgb(0 0 0 / 0.1);
-    color: var(--text-primary);
+    color: var(--panel-pill-fg);
+    filter: brightness(1.1);
   }
 
   .sidebar-actions .sidebar-new-folder-button:active:not(:disabled) {
     transform: scale(0.96);
-    box-shadow:
-      inset 0 1px 1px -0.5px rgb(255 255 255 / 0.35),
-      inset 0 0 0 1px rgb(255 255 255 / 0.08),
-      0 1px 2px rgb(0 0 0 / 0.08);
   }
 
   .sidebar-actions .sidebar-new-folder-button:disabled {
@@ -662,6 +796,121 @@
   .sidebar-actions .sidebar-new-folder-button svg {
     width: 1rem;
     height: 1rem;
+    filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.2));
+  }
+
+  /* Footer theme slot: third glass circle of the trio. */
+  .sidebar-footer-theme-slot {
+    display: contents;
+  }
+
+  .sidebar-footer-theme-slot:empty {
+    display: none;
+  }
+
+  .sidebar-footer-theme-slot button {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background:
+      linear-gradient(
+        155deg,
+        rgb(255 255 255 / 0.07),
+        rgb(255 255 255 / 0.02) 40%,
+        rgb(0 0 0 / 0.05)
+      ),
+      rgb(255 255 255 / 0.1);
+    color: var(--panel-fg-dim);
+    cursor: pointer;
+    box-shadow:
+      inset 0 0 2px 1px rgb(255 255 255 / 0.4),
+      inset 0 0 10px 4px rgb(255 255 255 / 0.16),
+      inset 0 4px 16px rgb(0 0 0 / 0.05),
+      inset 0 8px 24px rgb(0 0 0 / 0.05),
+      inset 0 1px 0 rgb(255 255 255 / 0.65),
+      inset 0 -3px 8px rgb(0 0 0 / 0.3),
+      0 8px 24px rgb(0 0 0 / 0.3);
+    /* Plain-blur fallback first; the SVG-refraction line wins where
+       renderers accept url() in backdrop-filter, and is dropped as a
+       whole declaration where they don't - leaving the blur above. */
+    backdrop-filter: blur(26px) saturate(2);
+    -webkit-backdrop-filter: blur(26px) saturate(2);
+    backdrop-filter: url(#textpilot-glass) saturate(1.8);
+    -webkit-backdrop-filter: url(#textpilot-glass) saturate(1.8);
+    transition:
+      color 120ms ease,
+      box-shadow 120ms ease,
+      filter 120ms ease;
+  }
+
+  .sidebar-footer-theme-slot button:hover {
+    color: var(--panel-pill-fg);
+    filter: brightness(1.1);
+  }
+
+  .sidebar-footer-theme-slot button svg {
+    width: 1rem;
+    height: 1rem;
+    filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.2));
+  }
+
+  /* The luminous rim + specular wash shared by the glass trio: a
+     gradient ring (bright top-left, dissolving around the bend) and a
+     soft top-light, both clipped to the pill/circle shape. */
+  .sidebar-actions .sidebar-new-button::before,
+  .sidebar-actions .sidebar-new-folder-button::before,
+  .sidebar-footer-theme-slot button::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1.5px;
+    background: linear-gradient(
+      145deg,
+      rgb(255 255 255 / 0.95),
+      rgb(255 255 255 / 0.4) 24%,
+      rgb(255 255 255 / 0.14) 46%,
+      rgb(255 255 255 / 0.22) 68%,
+      rgb(255 255 255 / 0.7)
+    );
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    filter: drop-shadow(0 0 5px rgb(255 255 255 / 0.2));
+    pointer-events: none;
+  }
+
+  .sidebar-actions .sidebar-new-button::after,
+  .sidebar-actions .sidebar-new-folder-button::after,
+  .sidebar-footer-theme-slot button::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background:
+      radial-gradient(
+        130% 100% at 25% -20%,
+        rgb(255 255 255 / 0.6),
+        rgb(255 255 255 / 0) 52%
+      ),
+      linear-gradient(
+        100deg,
+        rgb(255 255 255 / 0) 42%,
+        rgb(255 255 255 / 0.16) 50%,
+        rgb(255 255 255 / 0) 58%
+      );
+    pointer-events: none;
+  }
+
+  /* Legacy titlebar theme slot (no longer rendered). */
+  .titlebar-theme-slot {
+    display: none;
   }
 
   /* Shared glass tooltip: one bubble for the glass buttons, appended
@@ -707,49 +956,51 @@
   .sidebar-list {
     display: flex;
     flex-direction: column;
-    gap: 1px; /* native rows sit flush; a hairline keeps them distinct */
+    gap: 2px; /* picture rows breathe; not flush like Finder */
     margin: 0;
-    padding: 0;
+    padding: 0.35rem 0 0.6rem;
     list-style: none;
   }
 
-  /* A source-list row: 25px tall, a 13px label, 5px corners - the
-     metrics Finder and Mail use, so the rail reads as one of them and
-     not as a web list. */
+  /* Picture row: ~40px tall, 15px label, outline icon + label with a
+     generous gap. Theme-aware: dark text on light glass, light text
+     on dark glass. */
   .sidebar-row {
     display: flex;
     align-items: center;
-    gap: 0.35rem;
+    gap: 0.75rem;
     width: 100%;
-    height: 1.55rem;
-    padding: 0 0.3rem;
+    min-height: 2.5rem;
+    padding: 0.55rem 0.75rem;
     border: 0;
-    border-radius: 5px;
+    border-radius: 10px;
     background: transparent;
-    color: var(--text-primary);
-    font-size: 0.8125rem; /* 13px */
-    line-height: 1;
+    color: var(--panel-fg);
+    font-size: 0.9375rem; /* 15px */
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
     cursor: pointer;
     text-align: left;
+    transition:
+      background 120ms ease,
+      color 120ms ease;
   }
 
-  /* The delete affordance: a small trash on the row's right, visible
-     on hover, in the destructive red. Hidden with display:none (not
-     just opacity) so it takes no layout space until needed - otherwise
-     the title is squeezed to a few characters, especially on folder
-     rows with three actions. */
+  /* Row affordances: ghost squares, theme-aware. Hidden until
+     hover/focus so the title gets the full width. */
   .sidebar-delete-button {
     display: none;
     place-items: center;
     flex: none;
-    width: 1.25rem;
-    height: 1.25rem;
+    width: 1.6rem;
+    height: 1.6rem;
     margin-left: auto;
     padding: 0;
     border: 0;
-    border-radius: 5px;
+    border-radius: 7px;
     background: transparent;
-    color: var(--text-secondary);
+    color: var(--panel-fg-dim);
     opacity: 0;
     cursor: pointer;
     transition: opacity 100ms ease, background 100ms ease;
@@ -762,30 +1013,27 @@
   }
 
   .sidebar-delete-button:hover {
-    background: var(--destructive-bg);
+    background: rgb(255 69 58 / 0.18);
     color: var(--destructive);
   }
 
   .sidebar-delete-button svg {
-    width: 0.85rem;
-    height: 0.85rem;
+    width: 0.95rem;
+    height: 0.95rem;
   }
 
-  /* Per-folder quick actions: add document, add subfolder. Same slot
-     styling as the delete button; they sit to its left and appear on
-     row hover together. Hidden with display:none so the folder name
-     gets the full row width when the actions are not in use. */
+  /* Per-folder quick actions: add document, add subfolder. */
   .sidebar-row-action {
     display: none;
     place-items: center;
     flex: none;
-    width: 1.25rem;
-    height: 1.25rem;
+    width: 1.6rem;
+    height: 1.6rem;
     padding: 0;
     border: 0;
-    border-radius: 5px;
+    border-radius: 7px;
     background: transparent;
-    color: var(--text-secondary);
+    color: var(--panel-fg-dim);
     opacity: 0;
     cursor: pointer;
     transition: opacity 100ms ease, background 100ms ease;
@@ -798,8 +1046,8 @@
   }
 
   .sidebar-row-action:hover {
-    background: var(--hover-strong);
-    color: var(--accent);
+    background: var(--panel-hover);
+    color: var(--panel-fg);
   }
 
   .sidebar-row-action:disabled {
@@ -808,8 +1056,8 @@
   }
 
   .sidebar-row-action svg {
-    width: 0.85rem;
-    height: 0.85rem;
+    width: 0.95rem;
+    height: 0.95rem;
   }
 
   .sidebar-row--selected .sidebar-row-action {
@@ -821,12 +1069,12 @@
   }
 
   .sidebar-row--selected .sidebar-delete-button:hover {
+    background: rgb(255 69 58 / 0.22);
     color: var(--destructive);
-    background: var(--destructive-bg);
   }
 
   .sidebar-row:hover {
-    background: var(--hover-bg);
+    background: var(--panel-hover);
   }
 
   /* Rows are divs with button semantics (real <button>s cannot nest
@@ -837,74 +1085,68 @@
     outline-offset: -2px;
   }
 
-  /* The selected row: the system accent filled across the row, label
-     and glyphs in white - exactly how a native source list marks the
-     item you are on. */
+  /* Selected row: neutral wash per theme, never the blue accent fill. */
   .sidebar-row--selected,
   .sidebar-row--selected:hover {
-    background: var(--sidebar-selected-bg);
-    color: var(--sidebar-selected-fg);
+    background: var(--panel-selected);
+    color: var(--panel-selected-fg);
   }
 
   .sidebar-row--selected .sidebar-icon,
   .sidebar-row--selected .sidebar-disclosure {
-    color: var(--sidebar-selected-fg);
+    color: inherit;
   }
 
-  /* Window in the background: the accent gives way to a neutral wash,
-     exactly like an unfocused Finder. */
+  /* Window in the background: dim the wash slightly. */
   body.window-inactive .sidebar-row--selected,
   body.window-inactive .sidebar-row--selected:hover {
-    background: var(--sidebar-inactive-bg);
-    color: var(--text-primary);
+    opacity: 0.75;
   }
 
   body.window-inactive .sidebar-row--selected .sidebar-icon,
   body.window-inactive .sidebar-row--selected .sidebar-disclosure {
-    color: var(--text-secondary);
+    color: inherit;
   }
 
   .sidebar-icon {
-    width: 1rem;
-    height: 1rem;
+    width: 1.25rem;
+    height: 1.25rem;
     flex: none;
-    color: var(--text-secondary);
+    color: var(--panel-fg-dim);
+    /* Picture icons are outline glyphs, not filled. */
+    fill: none;
+    stroke-width: 1.6;
   }
 
-  /* Folder glyphs are solid, Finder-style: the hierarchy reads from
-     filled shapes at a glance instead of from line art. */
+  /* Keep folder glyphs outline like the picture (was solid fill). */
   .sidebar-row--folder .sidebar-icon {
-    fill: currentColor;
+    fill: none;
   }
 
   /* The leading gutter: the disclosure triangle's slot on a folder, an
-     empty spacer on a document. Fixed width on both, so a level's
-     icons stand in one column and nesting shows up as pure indent. */
+     empty spacer on a document. */
   .sidebar-gutter,
   .sidebar-disclosure {
     display: grid;
     place-items: center;
     flex: none;
-    width: 1rem;
-    height: 1rem;
+    width: 1.1rem;
+    height: 1.1rem;
   }
 
-  /* The disclosure triangle: a small solid wedge in the tertiary gray,
-     Mail-style - pointing right while the folder is folded, down while
-     it is open. It is part of the row, so clicking it is the same as
-     clicking the row. */
+  /* The disclosure wedge, dimmed. */
   .sidebar-disclosure {
     padding: 0;
     border: 0;
     background: transparent;
-    color: var(--text-tertiary);
+    color: var(--panel-fg-faint);
     cursor: pointer;
     transition: transform 120ms ease;
   }
 
   .sidebar-disclosure svg {
-    width: 0.7rem;
-    height: 0.7rem;
+    width: 0.75rem;
+    height: 0.75rem;
     fill: currentColor;
     stroke: currentColor;
   }
@@ -913,16 +1155,15 @@
     transform: rotate(90deg);
   }
 
-  /* Drop feedback while dragging over a row: an insertion line for
-     before/after, a full highlight for into-a-folder. */
+  /* Drop feedback while dragging over a row: theme wash. */
   .sidebar-row.drop-target {
-    background: var(--accent-bg);
+    background: var(--panel-selected);
   }
 
   .sidebar-row.drop-target[data-drop-mode="into"] {
     outline: 1.5px solid var(--accent-focus);
     outline-offset: -1.5px;
-    border-radius: 6px;
+    border-radius: 10px;
   }
 
   .sidebar-row.drop-target[data-drop-mode="before"]::before,
@@ -962,15 +1203,12 @@
     text-overflow: ellipsis;
   }
 
-  /* The folder count: documents in the whole subtree, tabular figures
-     in the tertiary gray at the row's right edge. It yields its slot
-     to the quick actions on hover (or when one takes keyboard focus),
-     so the title never shifts to make room. */
+  /* The folder count: dimmed figures at the row's right edge. */
   .sidebar-count {
     flex: none;
     margin-left: auto;
-    font-size: 0.75rem;
-    color: var(--text-tertiary);
+    font-size: 0.8rem;
+    color: var(--panel-fg-faint);
     font-variant-numeric: tabular-nums;
   }
 
@@ -981,20 +1219,18 @@
 
   .sidebar-row--selected .sidebar-count {
     color: inherit;
-    opacity: 0.65;
+    opacity: 0.7;
   }
 
-  /* The inline rename input: same size and face as the title it
-     replaces, so the swap reads as the text becoming editable, not a
-     new control appearing. */
+  /* The inline rename input: theme-aware field matching the panel. */
   .sidebar-rename-input {
     width: 100%;
     min-width: 0;
-    padding: 0 0.25rem;
-    border: 1px solid var(--accent-focus);
-    border-radius: 4px;
-    background: var(--rename-bg);
-    color: var(--text-primary);
+    padding: 0.15rem 0.4rem;
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    background: var(--panel-rename-bg);
+    color: var(--panel-fg);
     font: inherit;
     font-size: inherit;
     line-height: inherit;
@@ -1006,7 +1242,9 @@
   }
 
   /* The formatting toolbar: a rounded floating pill, bottom-centered
-     over the document and out of the text flow. */
+     over the document and out of the text flow. Same "liquid glass"
+     recipe as the sidebar action pills: translucent sheen over the
+     backdrop blur, hairline border, top light catch and soft lift. */
   .toolbar {
     position: absolute;
     bottom: 2rem;
@@ -1018,14 +1256,23 @@
     gap: 0.25rem;
     max-width: calc(100% - 2rem);
     padding: 0.45rem 0.7rem;
-    background: var(--toolbar-bg);
-    border: 1px solid var(--separator);
+    border: 0.5px solid var(--glass-border);
     border-radius: 1rem;
+    background: linear-gradient(
+      135deg,
+      rgb(255 255 255 / 0.14),
+      rgb(255 255 255 / 0.03) 40%,
+      rgb(255 255 255 / 0.06) 70%,
+      rgb(255 255 255 / 0.11)
+    );
     box-shadow:
+      inset 0 0 0 1px rgb(255 255 255 / 0.12),
+      inset 0 1.5px 1.5px -1px rgb(255 255 255 / 0.45),
+      inset 0 -1.5px 1.5px -1px rgb(255 255 255 / 0.2),
       0 12px 32px rgb(0 0 0 / 0.18),
       0 2px 8px rgb(0 0 0 / 0.12);
-    backdrop-filter: blur(20px) saturate(1.8);
-    -webkit-backdrop-filter: blur(20px) saturate(1.8);
+    backdrop-filter: blur(28px) saturate(1.9);
+    -webkit-backdrop-filter: blur(28px) saturate(1.9);
     overflow-x: auto;
     scrollbar-width: none;
   }
@@ -1078,12 +1325,9 @@
   .status-bar {
     position: fixed;
     bottom: 0;
-    /* The sidebar runs the full window height; keep the status line
-       over the editor column, not underneath the rail. The variable
-       tracks live resizes because the handle sets it on :root. The
-       left inset glides on the same spring as the collapse so it never
-       jumps. */
-    left: var(--sidebar-width, 13.5rem);
+    /* The sidebar is a floating overlay, so the status line always
+       spans the full width underneath it. */
+    left: 0;
     right: 0;
     display: flex;
     justify-content: flex-end;
@@ -1093,7 +1337,6 @@
     color: var(--text-secondary);
     background: var(--status-gradient);
     pointer-events: none;
-    transition: left var(--sidebar-collapse-duration) var(--sidebar-collapse-ease);
   }
 
   .status-group {
@@ -1256,11 +1499,14 @@
     .sidebar,
     .sidebar-scroll,
     .sidebar-disclosure,
+    .sidebar-chrome .sidebar-toggle,
     .titlebar-controls,
     .titlebar-controls button,
     .sidebar-new-button.sidebar-new-button--hidden-rail,
     .sidebar-actions .sidebar-new-button,
     .sidebar-actions .sidebar-new-folder-button,
+    .sidebar-row,
+    .editor-column,
     .status-bar {
       transition: none !important;
     }

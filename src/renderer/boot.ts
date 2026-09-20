@@ -37,7 +37,7 @@ export function boot(root: HTMLElement = document.body): void {
     'data-vantail-drag': '',
     'aria-hidden': 'true',
   })
-  const editorColumn = h('div', { class: 'flex-1 min-w-0 flex flex-col' })
+  const editorColumn = h('div', { class: 'flex-1 min-w-0 flex flex-col editor-column' })
 
   const editor = createEditor()
   features.push(editor)

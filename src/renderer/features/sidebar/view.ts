@@ -42,20 +42,27 @@ export interface SidebarOptions {
 
 /**
  * The sidebar and the one mount point it offers other features: the
- * theme slot in the always-visible title-bar controls. Handed over as
- * an element rather than looked up by the theme feature, so nothing
- * has to query the document before the shell is mounted.
+ * theme slot in the floating panel's footer. Handed over as an element
+ * rather than looked up by the theme feature, so nothing has to query
+ * the document before the shell is mounted.
  */
 export interface SidebarComponent extends Component<HTMLElement> {
-  /** Theme slot in the title-bar controls - a blank div, filled by the
+  /** Theme slot in the sidebar footer - a blank div, filled by the
    *  theme switch at boot. Hidden by CSS while it stays empty. */
   readonly themeSlot: HTMLElement;
 }
 
 /** Width bounds and default, in px - the CSS fallback stays in sync. */
-const MIN_WIDTH = 180;
+const MIN_WIDTH = 200;
 const MAX_WIDTH = 420;
-const DEFAULT_WIDTH = 216; // 13.5rem
+const DEFAULT_WIDTH = 272; // 17rem - picture's floating card
+/** Below this rail width (px) the new-document button drops its label
+ *  and shows its icon only, instead of squeezing the text into an
+ *  ellipsis ("New do..."). Sized from the row's fixed chrome (scroll
+ *  padding, actions padding/gap, folder square, button padding/gap,
+ *  icon, borders) plus the label's natural width - see
+ *  sidebar-probe.html. */
+const COMPACT_THRESHOLD = 232;
 const RESIZE_STEP = 16; // one arrow-key press
 /** One nesting level, in rem - the pitch a child's icon steps in by. */
 const INDENT = 1;
@@ -104,6 +111,10 @@ export function createSidebar({
     width = clampWidth(px);
     document.documentElement.style.setProperty("--sidebar-width", `${width}px`);
     handle.setAttribute("aria-valuenow", String(width));
+    // Collapse the wide new-document button to its icon once the rail
+    // is too narrow to fit the label without ellipsis - the tooltip
+    // keeps the action named.
+    root.classList.toggle("sidebar--compact", width < COMPACT_THRESHOLD);
   }
 
   function storeWidth(): void {
@@ -240,12 +251,10 @@ export function createSidebar({
     }
   });
 
-  function syncToggle(): void {
-    panelToggle.setAttribute("aria-expanded", String(!hidden));
-  }
-
-  // Panel toggle: lives in the title-bar controls over the editor column,
-  // always visible, gliding with the rail's edge on collapse/expand.
+  // Panel toggle: lives in the floating panel's top-right corner, like
+  // the picture (traffic lights left, toggle right). Always visible
+  // while the panel is open; a twin in the title-bar controls reopens
+  // it while hidden.
   const panelToggle = h(
     "button",
     {
@@ -257,15 +266,37 @@ export function createSidebar({
     },
     createElement(icons.PanelLeft),
   );
-  panelToggle.addEventListener("click", () => {
+
+  // Reopen twin for the hidden state: parked top-left over the editor
+  // column, shown only while the floating panel is gone.
+  const reopenToggle = h(
+    "button",
+    {
+      type: "button",
+      class: "sidebar-toggle",
+      title: "Toggle sidebar",
+      "aria-label": "Toggle sidebar",
+      "aria-expanded": String(!hidden),
+    },
+    createElement(icons.PanelLeft),
+  );
+  reopenToggle.addEventListener("click", toggleSidebar);
+  panelToggle.addEventListener("click", toggleSidebar);
+
+  function syncToggle(): void {
+    panelToggle.setAttribute("aria-expanded", String(!hidden));
+    reopenToggle.setAttribute("aria-expanded", String(!hidden));
+  }
+
+  function toggleSidebar(): void {
     setHidden(!hidden);
     syncToggle();
-  });
+  }
 
-  // Appearance slot for the title-bar controls: an empty mount point
-  // for whatever control another feature owns (today, the theme
-  // switch), sitting right next to the panel toggle.
-  const themeSlot = h("div", { class: "titlebar-theme-slot" });
+  // Appearance slot for the sidebar footer: an empty mount point for
+  // whatever control another feature owns (today, the theme switch),
+  // sitting next to the creation buttons.
+  const themeSlot = h("div", { class: "sidebar-footer-theme-slot" });
 
   const handle = h("div", {
     class: "sidebar-resize-handle",
@@ -311,43 +342,41 @@ export function createSidebar({
     storeWidth();
   });
 
-  setWidth(width);
-
-  // Title-bar controls over the editor column: the panel toggle, the
-  // appearance slot, and the collapsed-rail new-document twin (shown
-  // only while the sidebar is hidden). One fixed row that glides with
-  // the rail's edge, so the toggle and the theme switch are always side
-  // by side, rail open or not.
+  // Title-bar controls over the editor column: only the reopen twin
+  // and the collapsed-rail new-document shortcut, shown while the
+  // floating panel is hidden. The main toggle and the theme switch
+  // live inside the panel itself (picture layout).
   const titlebarControls = h(
     "div",
     { class: "titlebar-controls" },
-    panelToggle,
-    themeSlot,
+    reopenToggle,
     newHiddenButton,
   );
 
+  // Floating panel (picture layout): chrome row with the *native*
+  // traffic lights (parked here via `trafficLightPosition` in
+  // vantail.config.ts - no fake dots) + toggle, then the real
+  // document/folder list, then a footer with the creation buttons +
+  // appearance slot. No dummy entries - `list` is filled from the live
+  // tree in renderList().
   const root = h(
     "nav",
     { class: "sidebar", "aria-label": "Documents" },
-    h("div", { class: "sidebar-drag-band", "data-vantail-drag": "" }),
+    h(
+      "div",
+      { class: "sidebar-chrome", "data-vantail-drag": "" },
+      panelToggle,
+    ),
     h(
       "div",
       { class: "sidebar-scroll" },
-      h(
-        "div",
-        { class: "sidebar-section" },
-        // Source-list header: the label only. The panel toggle and the
-        // appearance switch live in the title-bar controls over the
-        // editor column; the wide new-document button + new-folder
-        // square sit in the row directly below.
-        h(
-          "div",
-          { class: "sidebar-header" },
-          h("span", { class: "sidebar-header-label" }, "Documents"),
-        ),
-        h("div", { class: "sidebar-actions" }, newButton, newFolderButton),
-        list,
-      ),
+      h("div", { class: "sidebar-section" }, list),
+    ),
+    h(
+      "div",
+      { class: "sidebar-footer" },
+      h("div", { class: "sidebar-actions" }, newButton, newFolderButton),
+      themeSlot,
     ),
     handle,
   );
@@ -355,6 +384,11 @@ export function createSidebar({
   // The new-document twin is toggled with the same body class the hidden
   // state uses, so it never needs its own visibility bookkeeping.
   document.body.append(titlebarControls);
+
+  // Apply the restored width once the rail exists to carry the
+  // compact icon-only class - still before boot appends the shell, so
+  // a narrow restored rail paints compact immediately.
+  setWidth(width);
 
   // Apply the restored visibility before first paint: the class is set
   // synchronously here (still before boot appends the shell), so a
