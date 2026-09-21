@@ -1,0 +1,50 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  /* Mirrors the metrics that constrain the sidebar actions row
+     (values copied from src/renderer/styles/main.css). */
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; font-family: ui-sans-serif, -apple-system, system-ui, sans-serif; }
+  #row {
+    display: flex; align-items: stretch; gap: 8px;
+    padding: 5.6px 12.8px; width: 600px;
+  }
+  #btn {
+    flex: 1 1 auto; min-width: 0;
+    display: flex; align-items: center; justify-content: center;
+    gap: 8.8px; min-height: 40px; padding: 0 16px;
+    border: 0; border-radius: 999px;
+    font-size: 13px; font-weight: 600; white-space: nowrap;
+  }
+  #btn svg { width: 16px; height: 16px; flex: none; }
+  #label { overflow: hidden; text-overflow: ellipsis; }
+  #folder { flex: none; width: 40px; min-height: 40px; padding: 0; }
+  #theme { flex: none; width: 40px; min-height: 40px; padding: 0; margin-left: 8px; }
+  #out { font: 14px ui-monospace, monospace; padding: 16px; }
+</style>
+</head>
+<body>
+  <div id="row">
+    <button id="btn"><svg></svg><span id="label">New document</span></button>
+    <button id="folder"><svg></svg></button>
+    <button id="theme"></button>
+  </div>
+  <pre id="out">measuring…</pre>
+  <script>
+    const label = document.getElementById('label');
+    label.style.width = 'max-content';
+    const natural = label.getBoundingClientRect().width;
+    label.style.width = '';
+    // Fixed chrome around the label, per main.css: footer padding
+    // 2×12.8 + button padding 2×16 + icon 16 + icon-label gap 8.8
+    // + actions gap 8 + folder circle 40 + footer gap 8 + theme
+    // circle 40 + panel border 2×1.
+    const chrome = 25.6 + 32 + 16 + 8.8 + 8 + 40 + 8 + 40 + 2;
+    const need = Math.ceil(chrome + natural);
+    document.getElementById('out').textContent =
+      JSON.stringify({ labelNaturalWidth: natural, chrome, minWidthNeeded: need, inRem: need / 16 }, null, 1);
+  </script>
+</body>
+</html>

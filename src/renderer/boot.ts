@@ -62,10 +62,11 @@ export function boot(root: HTMLElement = document.body): void {
   root.append(shell)
 
   // Mounted only once the shell is in the document: the switch docks
-  // into the slot the sidebar hands it, so it rides the title-bar
-  // controls next to the panel toggle. Created any earlier, its mount
-  // point is not in the document yet and the button lands detached.
-  const themeSwitch = createThemeSwitch(sidebar.themeSlot)
+  // into the slots the sidebar hands it (footer + collapsed reopen
+  // pill), so it rides with the panel toggle in both states. Created
+  // any earlier, its mount points are not in the document yet and the
+  // buttons land detached.
+  const themeSwitch = createThemeSwitch(sidebar.themeSlot, sidebar.themeSlotHidden)
   features.push(themeSwitch)
 
   // Native window state: while the window is in the background macOS

@@ -62,33 +62,43 @@ function iconFor(preference: ThemePreference): Node {
 }
 
 export function createThemeSwitch(
-  /** Where the switch docks - the sidebar hands over its title-bar
-   *  slot. Required on purpose: a `document` lookup would silently fall
-   *  back to <body> whenever the shell is not mounted yet, and that
-   *  stray child shifts the whole layout down. */
-  container: HTMLElement,
+  /** Where the switch docks - the sidebar hands over both slots: the
+   *  footer (panel open) and the collapsed reopen pill (panel hidden).
+   *  Required on purpose: a `document` lookup would silently fall back
+   *  to <body> whenever the shell is not mounted yet, and that stray
+   *  child shifts the whole layout down. */
+  ...containers: HTMLElement[]
 ): Component<HTMLButtonElement> {
   let preference = getStoredTheme();
 
-  const button = h("button", {
-    type: "button",
-    class: "theme-switch",
-    title: LABEL[preference],
-    "aria-label": LABEL[preference],
-  }) as HTMLButtonElement;
-  button.append(iconFor(preference));
+  // One button per slot; they are clones of one state, so every
+  // render() updates all of them and they can never desync.
+  const buttons = containers.map((container) => {
+    const button = h("button", {
+      type: "button",
+      class: "theme-switch",
+      title: LABEL[preference],
+      "aria-label": LABEL[preference],
+    }) as HTMLButtonElement;
+    button.append(iconFor(preference));
+    button.addEventListener("click", cycle);
+    container.append(button);
+    return button;
+  });
 
   function render(): void {
-    button.replaceChildren(iconFor(preference));
-    button.title = LABEL[preference];
-    button.setAttribute("aria-label", LABEL[preference]);
+    for (const button of buttons) {
+      button.replaceChildren(iconFor(preference));
+      button.title = LABEL[preference];
+      button.setAttribute("aria-label", LABEL[preference]);
+    }
   }
 
-  button.addEventListener("click", () => {
+  function cycle(): void {
     preference = ORDER[(ORDER.indexOf(preference) + 1) % ORDER.length]!;
     applyTheme(preference);
     render();
-  });
+  }
 
   // A second window/tab changing the preference follows along.
   function onStorage(event: StorageEvent): void {
@@ -106,15 +116,15 @@ export function createThemeSwitch(
   }
   window.addEventListener("storage", onStorage);
 
-  // Docked in the title-bar controls next to the panel toggle, so it
-  // is always visible, rail open or not.
-  container.append(button);
+  // Docked in every slot the sidebar handed over: the footer's theme
+  // circle while the panel is open, the reopen pill's leftmost circle
+  // while it is hidden.
 
   return {
-    element: button,
+    element: buttons[0]!,
     destroy() {
       window.removeEventListener("storage", onStorage);
-      button.remove();
+      for (const button of buttons) button.remove();
     },
   };
 }

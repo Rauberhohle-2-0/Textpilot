@@ -47,13 +47,23 @@ export interface SidebarOptions {
  * the document before the shell is mounted.
  */
 export interface SidebarComponent extends Component<HTMLElement> {
-  /** Theme slot in the sidebar footer - a blank div, filled by the
-   *  theme switch at boot. Hidden by CSS while it stays empty. */
+  /** Theme slots: the sidebar footer (panel open) and a twin in the
+   *  collapsed reopen pill (panel hidden), left of the toggle. */
   readonly themeSlot: HTMLElement;
+  readonly themeSlotHidden: HTMLElement;
 }
 
-/** Width bounds and default, in px - the CSS fallback stays in sync. */
-const MIN_WIDTH = 200;
+/**
+ * Width bounds and default, in px - the CSS fallback stays in sync.
+ * The floor is the footer's own arithmetic: the probe's 273px minimum
+ * for the New-document pill + folder + theme circles, padded to 280
+ * for sub-pixel font rendering wiggle - the user still saw a sliver of
+ * overflow on the pill's label at 274. Below the floor the trio starts
+ * to squeeze, so the drag handle stops there instead. The floor sits
+ * above COMPACT_THRESHOLD, so the icon-only footer mode is unreachable
+ * by dragging (kept for the stored-width restore path).
+ */
+const MIN_WIDTH = 280;
 const MAX_WIDTH = 420;
 const DEFAULT_WIDTH = 272; // 17rem - picture's floating card
 /** Below this rail width (px) the new-document button drops its label
@@ -61,7 +71,8 @@ const DEFAULT_WIDTH = 272; // 17rem - picture's floating card
  *  ellipsis ("New do..."). Sized from the row's fixed chrome (scroll
  *  padding, actions padding/gap, folder square, button padding/gap,
  *  icon, borders) plus the label's natural width - see
- *  sidebar-probe.html. */
+ *  sidebar-probe.html. Unreachable while dragging since MIN_WIDTH
+ *  rose above it; restore clamping keeps it as a safety net. */
 const COMPACT_THRESHOLD = 232;
 const RESIZE_STEP = 16; // one arrow-key press
 /** One nesting level, in rem - the pitch a child's icon steps in by. */
@@ -297,6 +308,10 @@ export function createSidebar({
   // whatever control another feature owns (today, the theme switch),
   // sitting next to the creation buttons.
   const themeSlot = h("div", { class: "sidebar-footer-theme-slot" });
+  // Twin slot in the collapsed reopen pill: the theme switch clones
+  // itself here so light/dark stays reachable while the panel is
+  // hidden. Sits right of the sidebar toggle.
+  const themeSlotHidden = h("div", { class: "titlebar-theme-slot" });
 
   const handle = h("div", {
     class: "sidebar-resize-handle",
@@ -350,6 +365,7 @@ export function createSidebar({
     "div",
     { class: "titlebar-controls" },
     reopenToggle,
+    themeSlotHidden,
     newHiddenButton,
   );
 
@@ -975,6 +991,7 @@ export function createSidebar({
   return {
     element: root,
     themeSlot,
+    themeSlotHidden,
     destroy() {
       hideTooltip();
       tooltip.remove();

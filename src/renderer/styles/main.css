@@ -492,26 +492,33 @@
     left: 0;
   }
 
-  /* The reopen bar: only while the panel is hidden - a small floating
-     glass pill top-left with the toggle + quick new-document. Hidden
+  /* The reopen bar: only while the panel is hidden - a small rounded
+     glass pill pinned top-right with the toggle + quick new-document
+     (reference: icon cluster on a dark glass capsule). Hidden
      entirely while the panel is open (its toggle lives in the chrome).
      (The twin needs both class names: its selector must outrank the
      in-flow wide-button rule, or that rule keeps it visible.) */
   .titlebar-controls {
     position: fixed;
     top: var(--sidebar-float-gap);
-    left: var(--sidebar-float-gap);
+    right: var(--sidebar-float-gap);
     z-index: 40;
     display: none;
     align-items: center;
-    gap: 0.25rem;
-    padding: 0.35rem 0.45rem;
-    border: 1px solid var(--panel-border);
-    border-radius: 0.9rem;
-    background: var(--panel-glass);
-    backdrop-filter: blur(36px) saturate(1.8);
-    -webkit-backdrop-filter: blur(36px) saturate(1.8);
-    box-shadow: var(--panel-shadow);
+    gap: 0.2rem;
+    padding: 0.3rem;
+    border: 1px solid rgb(255 255 255 / 0.1);
+    border-radius: 999px;
+    background: linear-gradient(
+      to bottom,
+      rgb(255 255 255 / 0.08),
+      rgb(255 255 255 / 0.03)
+    );
+    backdrop-filter: blur(20px) saturate(1.4);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.1),
+      0 4px 16px rgb(0 0 0 / 0.25);
   }
 
   body.sidebar-hidden .titlebar-controls {
@@ -519,13 +526,14 @@
   }
 
   .titlebar-controls button {
+    position: relative;
     display: grid;
     place-items: center;
     width: 2rem;
     height: 2rem;
     padding: 0;
     border: 0;
-    border-radius: 8px;
+    border-radius: 999px;
     background: transparent;
     color: var(--panel-fg-dim);
     cursor: pointer;
@@ -539,13 +547,24 @@
   }
 
   .titlebar-controls button:hover {
-    background: var(--panel-hover);
+    background: rgb(255 255 255 / 0.1);
     color: var(--panel-fg);
   }
 
   .titlebar-controls button svg {
     width: 1.1rem;
     height: 1.1rem;
+  }
+
+  /* All pill buttons are equal ghosts: transparent until hover, per
+     the reference capsule where every icon sits on the shared glass
+     with no private fill. The ghost hover comes from the shared
+     .titlebar-controls button rules. (The twin needs both class
+     names so the rule documents its intent against the in-flow
+     wide-button styles.) */
+  .sidebar-new-button.sidebar-new-button--hidden-rail {
+    background: transparent;
+    box-shadow: none;
   }
 
   /* The floating chrome: native traffic lights on the left (parked
@@ -612,7 +631,9 @@
   }
 
   /* The footer: creation row + appearance, pinned to the panel's
-     bottom under a hairline. Sheer so the blur shows through. */
+     bottom under a hairline. Fully transparent - the buttons carry
+     their own glass, and a tinted band behind them kills the
+     refraction (nothing to bend) and reads as a stripe, not glass. */
   .sidebar-footer {
     flex: none;
     display: flex;
@@ -620,19 +641,6 @@
     gap: 0.5rem;
     padding: 0.7rem 0.8rem 0.85rem;
     border-top: 1px solid var(--panel-hairline);
-    /* Faint cool wash under the glass trio: refraction needs variance
-       behind it to bend, and the footer is otherwise flat. Subtle
-       enough to read as glass tint, not decoration. */
-    background:
-      linear-gradient(
-        120deg,
-        rgb(99 102 241 / 0.14),
-        rgb(168 85 247 / 0.08) 45%,
-        transparent 75%
-      ),
-      var(--panel-footer-bg);
-    backdrop-filter: blur(46px) saturate(2);
-    -webkit-backdrop-filter: blur(46px) saturate(2);
   }
 
   .sidebar-actions {
@@ -643,11 +651,9 @@
     gap: 0.5rem;
   }
 
-  /* Liquid-glass footer buttons (reference: floating pill + circles).
-     Three layers: a diagonal sheen over the theme tint, a luminous rim
-     that traces the curve (::before, bright top-left fading around the
-     bend), and a specular top-light wash (::after) - over backdrop
-     blur, so content behind refracts through. */
+  /* Footer buttons (reference: floating pill + circles): separate
+     capsules, each wearing the shared container glass - faint tint,
+     hairline ring, soft lift, blur - plus the circular hover veil. */
   .sidebar-actions .sidebar-new-button {
     position: relative;
     flex: 1 1 auto;
@@ -660,43 +666,35 @@
     padding: 0 1rem;
     border: 0;
     border-radius: 999px;
-    background:
-      linear-gradient(
-        155deg,
-        rgb(255 255 255 / 0.07),
-        rgb(255 255 255 / 0.02) 40%,
-        rgb(0 0 0 / 0.05)
-      ),
-      rgb(255 255 255 / 0.1);
     color: var(--panel-pill-fg);
     font-size: 0.8125rem;
     font-weight: 600;
     white-space: nowrap;
     cursor: pointer;
-    text-shadow: 0 1px 2px rgb(0 0 0 / 0.18);
+    /* The shared container recipe (same as the collapsed reopen pill
+       and the formatting toolbar): faint top-down white tint, hairline
+       light ring, inner top-light catch and one soft lift, over
+       blur - so all glass capsules read as one family. */
+    background: linear-gradient(
+      to bottom,
+      rgb(255 255 255 / 0.08),
+      rgb(255 255 255 / 0.03)
+    );
     box-shadow:
-      inset 0 0 2px 1px rgb(255 255 255 / 0.4),
-      inset 0 0 10px 4px rgb(255 255 255 / 0.16),
-      inset 0 4px 16px rgb(0 0 0 / 0.05),
-      inset 0 8px 24px rgb(0 0 0 / 0.05),
-      inset 0 1px 0 rgb(255 255 255 / 0.65),
-      inset 0 -3px 8px rgb(0 0 0 / 0.3),
-      0 8px 24px rgb(0 0 0 / 0.3);
-    /* Plain-blur fallback first; the SVG-refraction line wins where
-       renderers accept url() in backdrop-filter, and is dropped as a
-       whole declaration where they don't - leaving the blur above. */
-    backdrop-filter: blur(26px) saturate(2);
-    -webkit-backdrop-filter: blur(26px) saturate(2);
-    backdrop-filter: url(#textpilot-glass) saturate(1.8);
-    -webkit-backdrop-filter: url(#textpilot-glass) saturate(1.8);
+      inset 0 0 0 1px rgb(255 255 255 / 0.1),
+      inset 0 1px 0 rgb(255 255 255 / 0.1),
+      0 4px 16px rgb(0 0 0 / 0.25);
+    backdrop-filter: blur(20px) saturate(1.4);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
     transition:
+      background 120ms ease,
       box-shadow 120ms ease,
       transform 120ms ease,
       filter 120ms ease;
   }
 
   .sidebar-actions .sidebar-new-button:hover:not(:disabled) {
-    filter: brightness(1.1);
+    color: var(--panel-pill-fg);
   }
 
   .sidebar-actions .sidebar-new-button:active:not(:disabled) {
@@ -712,7 +710,6 @@
     width: 1rem;
     height: 1rem;
     flex: none;
-    filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.2));
   }
 
   .sidebar-new-label {
@@ -747,33 +744,22 @@
     padding: 0;
     border: 0;
     border-radius: 999px;
-    background:
-      linear-gradient(
-        155deg,
-        rgb(255 255 255 / 0.07),
-        rgb(255 255 255 / 0.02) 40%,
-        rgb(0 0 0 / 0.05)
-      ),
-      rgb(255 255 255 / 0.1);
+    background: linear-gradient(
+      to bottom,
+      rgb(255 255 255 / 0.08),
+      rgb(255 255 255 / 0.03)
+    );
     color: var(--panel-fg-dim);
     cursor: pointer;
     box-shadow:
-      inset 0 0 2px 1px rgb(255 255 255 / 0.4),
-      inset 0 0 10px 4px rgb(255 255 255 / 0.16),
-      inset 0 4px 16px rgb(0 0 0 / 0.05),
-      inset 0 8px 24px rgb(0 0 0 / 0.05),
-      inset 0 1px 0 rgb(255 255 255 / 0.65),
-      inset 0 -3px 8px rgb(0 0 0 / 0.3),
-      0 8px 24px rgb(0 0 0 / 0.3);
-    /* Plain-blur fallback first; the SVG-refraction line wins where
-       renderers accept url() in backdrop-filter, and is dropped as a
-       whole declaration where they don't - leaving the blur above. */
-    backdrop-filter: blur(26px) saturate(2);
-    -webkit-backdrop-filter: blur(26px) saturate(2);
-    backdrop-filter: url(#textpilot-glass) saturate(1.8);
-    -webkit-backdrop-filter: url(#textpilot-glass) saturate(1.8);
+      inset 0 0 0 1px rgb(255 255 255 / 0.1),
+      inset 0 1px 0 rgb(255 255 255 / 0.1),
+      0 4px 16px rgb(0 0 0 / 0.25);
+    backdrop-filter: blur(20px) saturate(1.4);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
     transition:
       color 120ms ease,
+      background 120ms ease,
       box-shadow 120ms ease,
       transform 120ms ease,
       filter 120ms ease;
@@ -781,7 +767,6 @@
 
   .sidebar-actions .sidebar-new-folder-button:hover:not(:disabled) {
     color: var(--panel-pill-fg);
-    filter: brightness(1.1);
   }
 
   .sidebar-actions .sidebar-new-folder-button:active:not(:disabled) {
@@ -796,7 +781,6 @@
   .sidebar-actions .sidebar-new-folder-button svg {
     width: 1rem;
     height: 1rem;
-    filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.2));
   }
 
   /* Footer theme slot: third glass circle of the trio. */
@@ -817,99 +801,70 @@
     padding: 0;
     border: 0;
     border-radius: 999px;
-    background:
-      linear-gradient(
-        155deg,
-        rgb(255 255 255 / 0.07),
-        rgb(255 255 255 / 0.02) 40%,
-        rgb(0 0 0 / 0.05)
-      ),
-      rgb(255 255 255 / 0.1);
+    background: linear-gradient(
+      to bottom,
+      rgb(255 255 255 / 0.08),
+      rgb(255 255 255 / 0.03)
+    );
     color: var(--panel-fg-dim);
     cursor: pointer;
     box-shadow:
-      inset 0 0 2px 1px rgb(255 255 255 / 0.4),
-      inset 0 0 10px 4px rgb(255 255 255 / 0.16),
-      inset 0 4px 16px rgb(0 0 0 / 0.05),
-      inset 0 8px 24px rgb(0 0 0 / 0.05),
-      inset 0 1px 0 rgb(255 255 255 / 0.65),
-      inset 0 -3px 8px rgb(0 0 0 / 0.3),
-      0 8px 24px rgb(0 0 0 / 0.3);
-    /* Plain-blur fallback first; the SVG-refraction line wins where
-       renderers accept url() in backdrop-filter, and is dropped as a
-       whole declaration where they don't - leaving the blur above. */
-    backdrop-filter: blur(26px) saturate(2);
-    -webkit-backdrop-filter: blur(26px) saturate(2);
-    backdrop-filter: url(#textpilot-glass) saturate(1.8);
-    -webkit-backdrop-filter: url(#textpilot-glass) saturate(1.8);
+      inset 0 0 0 1px rgb(255 255 255 / 0.1),
+      inset 0 1px 0 rgb(255 255 255 / 0.1),
+      0 4px 16px rgb(0 0 0 / 0.25);
+    backdrop-filter: blur(20px) saturate(1.4);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
     transition:
       color 120ms ease,
+      background 120ms ease,
       box-shadow 120ms ease,
+      transform 120ms ease,
       filter 120ms ease;
   }
 
   .sidebar-footer-theme-slot button:hover {
     color: var(--panel-pill-fg);
-    filter: brightness(1.1);
   }
 
   .sidebar-footer-theme-slot button svg {
     width: 1rem;
     height: 1rem;
-    filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.2));
   }
 
-  /* The luminous rim + specular wash shared by the glass trio: a
-     gradient ring (bright top-left, dissolving around the bend) and a
-     soft top-light, both clipped to the pill/circle shape. */
-  .sidebar-actions .sidebar-new-button::before,
-  .sidebar-actions .sidebar-new-folder-button::before,
-  .sidebar-footer-theme-slot button::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    padding: 1.5px;
-    background: linear-gradient(
-      145deg,
-      rgb(255 255 255 / 0.95),
-      rgb(255 255 255 / 0.4) 24%,
-      rgb(255 255 255 / 0.14) 46%,
-      rgb(255 255 255 / 0.22) 68%,
-      rgb(255 255 255 / 0.7)
-    );
-    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-    mask-composite: exclude;
-    filter: drop-shadow(0 0 5px rgb(255 255 255 / 0.2));
-    pointer-events: none;
-  }
-
+  /* Smaller hover/active veil for the footer trio only: a soft light
+     disc floating 5px inside the button frame, so the capsule's own
+     glass edge stays visible around the highlight instead of the fill
+     swallowing the whole shape. The collapsed pill and toolbar keep
+     their full-frame hover. */
   .sidebar-actions .sidebar-new-button::after,
   .sidebar-actions .sidebar-new-folder-button::after,
   .sidebar-footer-theme-slot button::after {
     content: "";
     position: absolute;
-    inset: 0;
+    inset: 5px;
     border-radius: inherit;
-    background:
-      radial-gradient(
-        130% 100% at 25% -20%,
-        rgb(255 255 255 / 0.6),
-        rgb(255 255 255 / 0) 52%
-      ),
-      linear-gradient(
-        100deg,
-        rgb(255 255 255 / 0) 42%,
-        rgb(255 255 255 / 0.16) 50%,
-        rgb(255 255 255 / 0) 58%
-      );
+    background: rgb(255 255 255 / 0.1);
+    opacity: 0;
+    transition: opacity 100ms ease;
     pointer-events: none;
   }
 
-  /* Legacy titlebar theme slot (no longer rendered). */
+  .sidebar-actions .sidebar-new-button:hover:not(:disabled)::after,
+  .sidebar-actions .sidebar-new-folder-button:hover:not(:disabled)::after,
+  .sidebar-footer-theme-slot button:hover::after {
+    opacity: 1;
+  }
+
+  /* Theme-switch slot inside the collapsed reopen pill: pass-through
+     wrapper, hidden while the switch hasn't docked into it. The
+     button inside is styled by the .titlebar-controls button rules
+     (ghost circle, fills on hover) - the highlighted circle stays
+     reserved for New document. */
   .titlebar-theme-slot {
+    display: contents;
+  }
+
+  .titlebar-theme-slot:empty {
     display: none;
   }
 
@@ -1242,9 +1197,10 @@
   }
 
   /* The formatting toolbar: a rounded floating pill, bottom-centered
-     over the document and out of the text flow. Same "liquid glass"
-     recipe as the sidebar action pills: translucent sheen over the
-     backdrop blur, hairline border, top light catch and soft lift. */
+     over the document and out of the text flow. Same container recipe
+     as the collapsed reopen pill: faint top-down white tint over the
+     blur, hairline light border, inner top-light catch and one soft
+     lift - so the two glass capsules read as one family. */
   .toolbar {
     position: absolute;
     bottom: 2rem;
@@ -1256,23 +1212,18 @@
     gap: 0.25rem;
     max-width: calc(100% - 2rem);
     padding: 0.45rem 0.7rem;
-    border: 0.5px solid var(--glass-border);
-    border-radius: 1rem;
+    border: 1px solid rgb(255 255 255 / 0.1);
+    border-radius: 999px;
     background: linear-gradient(
-      135deg,
-      rgb(255 255 255 / 0.14),
-      rgb(255 255 255 / 0.03) 40%,
-      rgb(255 255 255 / 0.06) 70%,
-      rgb(255 255 255 / 0.11)
+      to bottom,
+      rgb(255 255 255 / 0.08),
+      rgb(255 255 255 / 0.03)
     );
     box-shadow:
-      inset 0 0 0 1px rgb(255 255 255 / 0.12),
-      inset 0 1.5px 1.5px -1px rgb(255 255 255 / 0.45),
-      inset 0 -1.5px 1.5px -1px rgb(255 255 255 / 0.2),
-      0 12px 32px rgb(0 0 0 / 0.18),
-      0 2px 8px rgb(0 0 0 / 0.12);
-    backdrop-filter: blur(28px) saturate(1.9);
-    -webkit-backdrop-filter: blur(28px) saturate(1.9);
+      inset 0 1px 0 rgb(255 255 255 / 0.1),
+      0 4px 16px rgb(0 0 0 / 0.25);
+    backdrop-filter: blur(20px) saturate(1.4);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
     overflow-x: auto;
     scrollbar-width: none;
   }
@@ -1296,25 +1247,25 @@
   }
 
   .toolbar-button {
+    position: relative;
     display: grid;
     place-items: center;
     width: 1.9rem;
     height: 1.9rem;
     border: 0;
-    border-radius: 6px;
+    border-radius: 999px;
     background: transparent;
     color: var(--text-secondary);
     cursor: pointer;
+    transition:
+      background 100ms ease,
+      color 100ms ease;
   }
 
-  .toolbar-button:hover {
+  .toolbar-button:hover,
+  .toolbar-button--active {
     background: var(--hover-strong);
     color: var(--text-primary);
-  }
-
-  .toolbar-button--active {
-    background: var(--accent-bg);
-    color: var(--accent);
   }
 
   .toolbar-button svg {
