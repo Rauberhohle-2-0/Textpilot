@@ -9,8 +9,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "expo": "57.0.22",
-    "hono": "4.13.7",
+    "expo": "57.0.24",
+    "hono": "4.13.8",
     "htmx.org": "^2.0.10",
     "lucide": "^1.46.0",
     "markdown-it": "^15.0.2",
