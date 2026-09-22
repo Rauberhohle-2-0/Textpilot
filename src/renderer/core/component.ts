@@ -10,7 +10,3 @@ export interface Component<T extends HTMLElement = HTMLElement> {
   readonly element: T;
   destroy?(): void;
 }
-
-export type ComponentFactory<T extends HTMLElement = HTMLElement> = (
-  ...args: never[]
-) => Component<T>;

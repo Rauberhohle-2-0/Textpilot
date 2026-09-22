@@ -51,7 +51,6 @@
   --blockquote-text: #6e6e73;
   --link: #007aff;
   --mark-bg: rgb(255 214 10 / 0.45);
-  --status-gradient: linear-gradient(to top, rgb(255 255 255 / 0.92), transparent);
   --rename-bg: #ffffff;
   --placeholder: #aeaeb2;
   --marker: #6e6e73;
@@ -153,7 +152,6 @@
   --blockquote-text: #a1a1a6;
   --link: #0a84ff;
   --mark-bg: rgb(255 214 10 / 0.3);
-  --status-gradient: linear-gradient(to top, rgb(30 30 30 / 0.92), transparent);
   --rename-bg: rgb(0 0 0 / 0.35);
   --placeholder: #636366;
   --marker: #98989f;
@@ -225,7 +223,6 @@
     --link: #0a84ff;
     --mark-bg: rgb(255 214 10 / 0.3);
     --toolbar-bg: rgb(40 40 42 / 0.82);
-    --status-gradient: linear-gradient(to top, rgb(30 30 30 / 0.92), transparent);
     --rename-bg: rgb(0 0 0 / 0.35);
     --placeholder: #636366;
     --marker: #98989f;
@@ -310,6 +307,12 @@
     height: var(--vantail-titlebar-height, 36px);
     padding-left: var(--vantail-titlebar-inset-left, 0px);
     padding-right: var(--vantail-titlebar-inset-right, 0px);
+    /* The save status docks at the right end of this band; everywhere
+       else it stays empty so the runtime still reads an empty-space
+       press as "drag the window". */
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
     user-select: none;
     -webkit-user-select: none;
   }
@@ -331,6 +334,13 @@
        the native frame measures differently. */
     --window-radius: 1.375rem;
     --sidebar-radius: calc(var(--window-radius) - var(--sidebar-float-gap));
+    /* The collapsed rail's control pill, parked in the window's top-right
+       corner - the same corner the save status wants. Three 2rem buttons
+       + two 0.2rem gaps + 0.3rem padding + hairline borders: width =
+       96 + 6.4 + 9.6 + 2 = 114px. Derived here rather than measured in
+       JS, because the pill is `display: none` whenever the rail is open
+       and a measurement taken then would silently read 0. */
+    --titlebar-controls-width: 7.125rem;
   }
 
   .sidebar {
@@ -449,7 +459,6 @@
 
   body.sidebar-resizing .sidebar,
   body.sidebar-resizing .titlebar-controls,
-  body.sidebar-resizing .status-bar,
   body.sidebar-resizing .editor-column {
     transition: none !important;
   }
@@ -486,10 +495,6 @@
   body.sidebar-hidden .sidebar-resize-handle {
     opacity: 0;
     pointer-events: none;
-  }
-
-  body.sidebar-hidden .status-bar {
-    left: 0;
   }
 
   /* The reopen bar: only while the panel is hidden - a small rounded
@@ -546,8 +551,15 @@
     display: grid;
   }
 
+  /* The hover veil is the theme's, not a white wash: on light glass a
+     white fill is invisible against the surface it sits on, which left
+     these buttons with no hover at all in light mode. */
   .titlebar-controls button:hover {
-    background: rgb(255 255 255 / 0.1);
+    background: linear-gradient(
+      to bottom,
+      var(--glass-hover-veil-top),
+      var(--glass-hover-veil-bottom)
+    );
     color: var(--panel-fg);
   }
 
@@ -831,11 +843,13 @@
     height: 1rem;
   }
 
-  /* Smaller hover/active veil for the footer trio only: a soft light
-     disc floating 5px inside the button frame, so the capsule's own
-     glass edge stays visible around the highlight instead of the fill
+  /* Smaller hover/active veil for the footer trio only: a soft disc
+     floating 5px inside the button frame, so the capsule's own glass
+     edge stays visible around the highlight instead of the fill
      swallowing the whole shape. The collapsed pill and toolbar keep
-     their full-frame hover. */
+     their full-frame hover. The veil rides the theme's token pair
+     (darkening on light glass, brightening on dark), so it is visible
+     in both modes. */
   .sidebar-actions .sidebar-new-button::after,
   .sidebar-actions .sidebar-new-folder-button::after,
   .sidebar-footer-theme-slot button::after {
@@ -843,7 +857,11 @@
     position: absolute;
     inset: 5px;
     border-radius: inherit;
-    background: rgb(255 255 255 / 0.1);
+    background: linear-gradient(
+      to bottom,
+      var(--glass-hover-veil-top),
+      var(--glass-hover-veil-bottom)
+    );
     opacity: 0;
     transition: opacity 100ms ease;
     pointer-events: none;
@@ -921,6 +939,9 @@
      generous gap. Theme-aware: dark text on light glass, light text
      on dark glass. */
   .sidebar-row {
+    /* Anchor for the action cluster, which is overlaid rather than laid
+       out (see .sidebar-row-actions). */
+    position: relative;
     display: flex;
     align-items: center;
     gap: 0.75rem;
@@ -942,29 +963,42 @@
       color 120ms ease;
   }
 
-  /* Row affordances: ghost squares, theme-aware. Hidden until
-     hover/focus so the title gets the full width. */
+  /* Row affordances: ghost squares, theme-aware. They sit in an overlay
+     cluster pinned to the row's right edge, so they cost the row no
+     layout width while idle - a folder row that reserved three buttons
+     plus their gaps left every nested name ellipsized to a letter or
+     two. Revealed by opacity alone, so hover never moves the row. */
+  .sidebar-row-actions {
+    position: absolute;
+    top: 0;
+    right: 0.4rem;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.1rem;
+  }
+
   .sidebar-delete-button {
-    display: none;
+    display: grid;
     place-items: center;
     flex: none;
     width: 1.6rem;
     height: 1.6rem;
-    margin-left: auto;
     padding: 0;
     border: 0;
     border-radius: 7px;
     background: transparent;
     color: var(--panel-fg-dim);
     opacity: 0;
+    pointer-events: none;
     cursor: pointer;
     transition: opacity 100ms ease, background 100ms ease;
   }
 
   .sidebar-row:hover .sidebar-delete-button,
   .sidebar-delete-button:focus-visible {
-    display: grid;
     opacity: 1;
+    pointer-events: auto;
   }
 
   .sidebar-delete-button:hover {
@@ -977,9 +1011,10 @@
     height: 0.95rem;
   }
 
-  /* Per-folder quick actions: add document, add subfolder. */
+  /* Per-folder quick actions: add document, add subfolder. Always
+     laid out and revealed by opacity alone (see delete button). */
   .sidebar-row-action {
-    display: none;
+    display: grid;
     place-items: center;
     flex: none;
     width: 1.6rem;
@@ -990,14 +1025,15 @@
     background: transparent;
     color: var(--panel-fg-dim);
     opacity: 0;
+    pointer-events: none;
     cursor: pointer;
     transition: opacity 100ms ease, background 100ms ease;
   }
 
   .sidebar-row:hover .sidebar-row-action,
   .sidebar-row-action:focus-visible {
-    display: grid;
     opacity: 1;
+    pointer-events: auto;
   }
 
   .sidebar-row-action:hover {
@@ -1177,6 +1213,21 @@
     opacity: 0.7;
   }
 
+  /*
+   * Renaming: the count and the action cluster step aside so the name
+   * field gets the width. The cluster is hidden (not just faded) so it
+   * cannot overlap the field, and only while renaming.
+   */
+  .sidebar-row--renaming .sidebar-count,
+  .sidebar-row--renaming .sidebar-row-actions {
+    display: none;
+  }
+
+  .sidebar-row--renaming .sidebar-row-title {
+    /* Never narrower than a name you can read back, whatever the rail is. */
+    min-width: 7rem;
+  }
+
   /* The inline rename input: theme-aware field matching the panel. */
   .sidebar-rename-input {
     width: 100%;
@@ -1273,21 +1324,39 @@
     height: 1.05rem;
   }
 
+  /* The save status: the right end of the title-bar band above the
+     editor - where macOS puts document state, out of the writing flow,
+     and opposite the sidebar's controls on the left. It used to be a
+     fixed footer spanning the window's bottom edge, which put the least
+     interesting state in a corner the eye visits, competed with the
+     floating toolbar 2rem above it, and needed three special cases to
+     follow the sidebar's collapse (a `left` override, a transition
+     suspension and an inverted transition list). None of that survives
+     here: the band already spans exactly the editor column.
+     Passive by design - presses fall through to the band's drag region. */
   .status-bar {
-    position: fixed;
-    bottom: 0;
-    /* The sidebar is a floating overlay, so the status line always
-       spans the full width underneath it. */
-    left: 0;
-    right: 0;
     display: flex;
-    justify-content: flex-end;
-    padding: 0.5rem 1rem;
+    align-items: center;
+    margin-right: 1rem;
     font-family: ui-sans-serif, -apple-system, system-ui, sans-serif;
     font-size: 0.75rem;
     color: var(--text-secondary);
-    background: var(--status-gradient);
     pointer-events: none;
+    user-select: none;
+    -webkit-user-select: none;
+    white-space: nowrap;
+    transition: margin-right var(--sidebar-collapse-duration) var(--sidebar-collapse-ease);
+  }
+
+  /* With the rail collapsed its control pill takes this corner, so the
+     status steps left of it: the pill's own right offset + its width +
+     a breath. It slides with the pill's arrival on the rail's own
+     spring, rather than occupying dead space beside an empty corner
+     while the rail is open. */
+  body.sidebar-hidden .status-bar {
+    margin-right: calc(
+      var(--sidebar-float-gap) + var(--titlebar-controls-width) + 0.75rem
+    );
   }
 
   .status-group {

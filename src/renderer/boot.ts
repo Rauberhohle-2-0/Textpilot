@@ -19,27 +19,35 @@ export function boot(root: HTMLElement = document.body): void {
 
   const features: Component[] = []
 
-  // Native title-bar strip: an empty, non-interactive band at the top of
-  // the window. The runtime moves the window from this band and maximises
-  // on double-click - but only where the page leaves it empty. The editor
-  // below is one big contenteditable surface, so without this strip every
-  // pixel of the band lands in editable text and the runtime never sees
-  // an empty-space press (no drag, no double-click zoom).
+  // Native title-bar strip: the band at the top of the window that the
+  // runtime moves the window from, and maximises on double-click - but
+  // only where the page leaves it empty. The editor below is one big
+  // contenteditable surface, so without this strip every pixel of the
+  // band lands in editable text and the runtime never sees an
+  // empty-space press (no drag, no double-click zoom).
   //
   // The sidebar spans the full window height - traffic lights floating
   // over it, macOS source-list style - so the strip only sits over the
   // editor column. The sidebar carries its own drag band inside.
+  //
+  // The band is not inert: the save status docks at its right end, and
+  // is `pointer-events: none` so presses still reach the band underneath
+  // it. That keeps the drag region whole while giving a piece of document
+  // state a home in window chrome instead of a footer across the bottom
+  // edge of the window.
   const shell = h('div', {
     class: 'flex flex-row h-screen w-screen overflow-hidden',
   })
-  const titleBar = h('header', {
+  // A `div`, not a `header`: the band is window chrome, and a header here
+  // would be a `banner` landmark wrapping nothing but the save status -
+  // which announces itself through its own live region.
+  const titleBar = h('div', {
     class: 'titlebar-spacer',
     'data-vantail-drag': '',
-    'aria-hidden': 'true',
   })
   const editorColumn = h('div', { class: 'flex-1 min-w-0 flex flex-col editor-column' })
 
-  const editor = createEditor()
+  const editor = createEditor({ statusSlot: titleBar })
   features.push(editor)
   const sidebar = createSidebar({
     onOpenDocument(id) {

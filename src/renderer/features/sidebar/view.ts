@@ -2,20 +2,19 @@
  * The sidebar: documents and folders as a Bear-style source list.
  *
  * A left rail rendering the tree - folders (nested to any depth) and
- * documents interleaved in one list, ordered by position, expandable.
+ * documents, folders first then alphabetical at each level, expandable.
  * Folder rows carry a live document count at their right edge.
  * Rows accept drag & drop: a document or folder dragged onto a folder
- * moves inside it; dropped on a row's edge it reorders between
- * siblings. Folders live exactly where the user drops them - no pinning
- * to the top.
+ * moves inside it. There is no reordering to drag - order is the
+ * filesystem's, and there is nothing to persist.
  */
 import { createElement, icons } from "lucide";
 import type { Component } from "../../core/component.ts";
 import { h } from "../../core/dom.ts";
 import type { DocumentMeta } from "../../../shared/documents.ts";
 import {
+  descendantIds,
   orderTree,
-  positionBetween,
   type FolderMeta,
   type TreeDocument,
   type TreeEntry,
@@ -31,7 +30,8 @@ import {
   moveFolder,
   renameDocument,
   renameFolder,
-} from "./api.ts";
+  resolveActiveDocument,
+} from "../../backend/index.ts";
 
 export interface SidebarOptions {
   /** Fired with the document id the user picked (or created). */
@@ -428,93 +428,53 @@ export function createSidebar({
   }
 
   /**
-   * Sibling positions around a drop target: the entry's position and
-   * its previous sibling's, used to compute the midpoint.
+   * Where a drop puts the dragged item: onto a folder's middle means
+   * inside it, onto any row's edge means that row's parent. Ordering
+   * within a level is the filesystem's, so there is no position to send.
    */
-  function siblingPositions(targetId: string, parentId: string | null): {
-    target: number | null;
-    before: number | null;
-  } {
-    const isFolder = folders.some((folder) => folder.id === targetId);
-    const siblings: { id: string; position: number }[] = [
-      ...folders
-        .filter((folder) => (folder.parentId ?? null) === parentId)
-        .map((folder) => ({ id: folder.id, position: folder.position })),
-      ...documents
-        .filter((document) => (document.parentId ?? null) === parentId)
-        .map((document) => ({ id: document.id, position: document.position ?? 0 })),
-    ].sort((a, b) => a.position - b.position);
-    const index = siblings.findIndex((sibling) => sibling.id === targetId);
-    if (index === -1) return { target: null, before: null };
-    return {
-      target: siblings[index]!.position,
-      before: index > 0 ? siblings[index - 1]!.position : null,
-    };
+  function dropParent(mode: DropMode, target: TreeEntry): string | null {
+    if (mode === "into" && target.kind === "folder") return target.folder.id;
+    return target.kind === "folder" ? target.folder.parentId : (target.document.parentId ?? null);
   }
 
-  function applyDrop(
-    payload: DragPayload,
-    mode: DropMode,
-    target: TreeEntry,
-  ): void {
-    const targetId = entryId(target);
-    if (payload.id === targetId) return;
-    const targetIsFolder = target.kind === "folder";
-    const targetParent = targetIsFolder
-      ? target.folder.parentId
-      : (target.document.parentId ?? null);
-    const targetPos = targetIsFolder ? target.folder.position : (target.document.position ?? 0);
+  function applyDrop(payload: DragPayload, mode: DropMode, target: TreeEntry): void {
+    if (payload.id === entryId(target)) return;
+    void applyMove(payload.kind, payload.id, dropParent(mode, target));
+  }
 
-    if (mode === "into") {
-      // Drop into a folder: last position inside it.
-      if (payload.kind === "folder" && targetId !== undefined) {
-        const inside = folders.filter((folder) => (folder.parentId ?? null) === targetId);
-        const position = inside.length > 0 ? Math.max(...inside.map((f) => f.position)) + 1024 : 0;
-        void moveFolder(payload.id, targetId, position).then(refresh);
-        return;
+  /**
+   * Move an item, then follow it. A move rewrites the item's id - the
+   * id is its path - so the open document is reopened at its new id;
+   * when it lived inside a moved folder, it falls back to whatever is
+   * left rather than saving into a path that no longer exists.
+   */
+  async function applyMove(
+    kind: DragPayload["kind"],
+    id: string,
+    parentId: string | null,
+  ): Promise<void> {
+    const wasSelected = kind === "document" && selectedId === id;
+    try {
+      const record =
+        kind === "folder" ? await moveFolder(id, parentId) : await moveDocument(id, parentId);
+      await refresh();
+      if (wasSelected) {
+        selectedId = record.id;
+        renderList();
+        onOpenDocument(record.id);
+      } else {
+        adoptSelection();
       }
-      const insideDocs = documents.filter(
-        (document) => (document.parentId ?? null) === targetId,
-      );
-      const insideFolders = folders.filter((folder) => (folder.parentId ?? null) === targetId);
-      const positions = [
-        ...insideDocs.map((d) => d.position ?? 0),
-        ...insideFolders.map((f) => f.position),
-      ];
-      const position = positions.length > 0 ? Math.max(...positions) + 1024 : 0;
-      void moveDocument(payload.id, targetId, position).then(refresh);
-      return;
-    }
-
-    // Before/after: same parent as the target, position between it and
-    // the neighbor on the drop side.
-    const { target: tPos, before } = siblingPositions(targetId, targetParent ?? null);
-    const position =
-      mode === "before"
-        ? positionBetween(before, tPos ?? targetPos)
-        : positionBetween(tPos ?? targetPos, null);
-    if (payload.kind === "folder") {
-      void moveFolder(payload.id, targetParent ?? null, position).then(refresh);
-    } else {
-      void moveDocument(payload.id, targetParent ?? null, position).then(refresh);
+    } catch (error) {
+      console.error("[sidebar]", error);
+      void refresh();
     }
   }
 
   /** A dragged folder may never drop into its own subtree. */
   function isOwnSubtree(payload: DragPayload, target: TreeEntry): boolean {
     if (payload.kind !== "folder" || target.kind !== "folder") return false;
-    const doomed = new Set<string>([payload.id]);
-    let grew = true;
-    while (grew) {
-      grew = false;
-      for (const folder of folders) {
-        if (folder.parentId !== null && doomed.has(folder.parentId) && !doomed.has(folder.id)) {
-          doomed.add(folder.id);
-          grew = true;
-        }
-      }
-    }
-    return doomed.has(target.folder.id);
+    return descendantIds(folders, payload.id).has(target.folder.id);
   }
 
   function wireDrop(row: HTMLElement, entry: TreeEntry): void {
@@ -569,17 +529,45 @@ export function createSidebar({
     const name = rawName.trim();
     if (save && name.length > 0 && name !== currentName) {
       const isFolder = folders.some((folder) => folder.id === id);
-      const applyLocal = isFolder
-        ? (folders = folders.map((entry) => (entry.id === id ? { ...entry, name } : entry)))
-        : (documents = documents.map((entry) => (entry.id === id ? { ...entry, title: name } : entry)));
-      void applyLocal;
+      const wasSelectedDocument = !isFolder && selectedId === id;
       const commit = isFolder ? renameFolder(id, name) : renameDocument(id, name);
       void commit
-        .catch((error) => console.error("[sidebar]", error))
-        .finally(() => void refresh());
+        .then(async (record) => {
+          await refresh();
+          if (wasSelectedDocument) {
+            // The filename is the title, so a rename is a new id; the
+            // open document follows it.
+            selectedId = record.id;
+            renderList();
+            onOpenDocument(record.id);
+          } else {
+            // A renamed folder takes its documents' ids with it.
+            adoptSelection();
+          }
+        })
+        .catch((error) => {
+          console.error("[sidebar]", error);
+          void refresh();
+        });
     } else {
       renderList();
     }
+  }
+
+  /**
+   * Keep the open document if the refresh still has it; otherwise show
+   * the first one. Used after an operation that can move an id out from
+   * under the editor.
+   */
+  function adoptSelection(): void {
+    if (selectedId === null || documents.some((document) => document.id === selectedId)) {
+      renderList();
+      return;
+    }
+    const next = documents[0] ?? null;
+    selectedId = next?.id ?? null;
+    renderList();
+    onDocumentDeleted(next?.id ?? null);
   }
 
   /** Whether a second click on this row lands soon enough to rename. */
@@ -625,28 +613,30 @@ export function createSidebar({
   }
 
   /**
-   * Documents inside a folder's whole subtree (nested folders
-   * included). Recomputed from live state on every render, so the
-   * count stays honest through creates, moves and deletes.
+   * Documents per folder, its whole subtree included.
+   *
+   * One pass for the whole list: every document credits each of its
+   * ancestor folders, so a row's count stays honest through nesting
+   * without re-walking the tree once per row. The walk is bounded by
+   * the folder count, so corrupt data with a cycle cannot hang a
+   * render.
    */
-  function documentCountInFolder(folderId: string): number {
-    const subtree = new Set<string>([folderId]);
-    let grew = true;
-    while (grew) {
-      grew = false;
-      for (const folder of folders) {
-        if (folder.parentId !== null && subtree.has(folder.parentId) && !subtree.has(folder.id)) {
-          subtree.add(folder.id);
-          grew = true;
-        }
+  function documentCounts(): Map<string, number> {
+    const parentOf = new Map(folders.map((folder) => [folder.id, folder.parentId]));
+    const counts = new Map<string, number>();
+    for (const document of documents) {
+      let parent = document.parentId ?? null;
+      let steps = 0;
+      while (parent !== null && steps < folders.length) {
+        counts.set(parent, (counts.get(parent) ?? 0) + 1);
+        parent = parentOf.get(parent) ?? null;
+        steps += 1;
       }
     }
-    return documents.filter(
-      (document) => document.parentId != null && subtree.has(document.parentId),
-    ).length;
+    return counts;
   }
 
-  function folderRow(folder: FolderMeta, depth: number): HTMLLIElement {
+  function folderRow(folder: FolderMeta, depth: number, documentCount: number): HTMLLIElement {
     const isCollapsed = collapsed.has(folder.id);
 
     // Per-folder creation: hovering the row reveals add buttons that
@@ -753,7 +743,7 @@ export function createSidebar({
       { class: "sidebar-row-title" },
       renamingId === folder.id ? buildRenameInput(folder.id, folder.name) : folder.name,
     );
-    const count = h("span", { class: "sidebar-count" }, String(documentCountInFolder(folder.id)));
+    const count = h("span", { class: "sidebar-count" }, String(documentCount));
     // The row is a div with button semantics, not a <button>: a button
     // may not contain other buttons (chevron, actions, delete), and
     // browsers - WebKit in particular - never dispatch clicks to
@@ -763,7 +753,12 @@ export function createSidebar({
       {
         role: "button",
         tabindex: "0",
-        class: "sidebar-row sidebar-row--folder",
+        // While renaming, the row drops its count and its action buttons
+        // (CSS) so the name field gets the width: a folder row otherwise
+        // spends nearly all of a narrow rail on them.
+        class:
+          "sidebar-row sidebar-row--folder" +
+          (renamingId === folder.id ? " sidebar-row--renaming" : ""),
         title: folder.name,
         draggable: "true",
         dataset: { folderId: folder.id },
@@ -772,9 +767,10 @@ export function createSidebar({
       folderIcon(isCollapsed),
       titleSpan,
       count,
-      addDocumentButton,
-      addFolderButton,
-      deleteButton,
+      // Actions ride over the row's right edge (see .sidebar-row-actions)
+      // instead of reserving flow width, so a nested folder's name has
+      // the rail to itself.
+      h("div", { class: "sidebar-row-actions" }, addDocumentButton, addFolderButton, deleteButton),
     );
     const activateRow = (): void => {
       if (renamingId === folder.id) return; // typing in the rename input
@@ -840,7 +836,9 @@ export function createSidebar({
         role: "button",
         tabindex: "0",
         class:
-          "sidebar-row" + (document.id === selectedId ? " sidebar-row--selected" : ""),
+          "sidebar-row" +
+          (document.id === selectedId ? " sidebar-row--selected" : "") +
+          (renamingId === document.id ? " sidebar-row--renaming" : ""),
         title: document.title,
         draggable: "true",
         dataset: { documentId: document.id },
@@ -848,7 +846,7 @@ export function createSidebar({
       gutter(),
       icon(),
       titleSpan,
-      deleteButton,
+      h("div", { class: "sidebar-row-actions" }, deleteButton),
     );
     const activateRow = (): void => {
       if (renamingId === document.id) return;
@@ -887,8 +885,13 @@ export function createSidebar({
     const treeDocuments: TreeDocument[] = documents.map((document) => ({
       ...document,
       parentId: document.parentId ?? null,
-      position: document.position ?? 0,
     }));
+    // One lookup table and one count pass for the whole render: the
+    // tree can be deep, and a linear scan per row turns every click
+    // into a quadratic walk.
+    const folderById = new Map(folders.map((folder) => [folder.id, folder]));
+    const counts = documentCounts();
+
     const entries = orderTree(folders, treeDocuments).filter((entry) => {
       // Hide the children of collapsed folders (they stay in the tree,
       // so expansion is instant - no refetch). An entry is visible when
@@ -897,7 +900,7 @@ export function createSidebar({
         entry.kind === "folder" ? entry.folder.parentId : (entry.document.parentId ?? null);
       while (parent !== null) {
         if (collapsed.has(parent)) return false;
-        const owner = folders.find((folder) => folder.id === parent);
+        const owner = folderById.get(parent);
         if (owner === undefined) break;
         parent = owner.parentId;
       }
@@ -905,7 +908,9 @@ export function createSidebar({
     });
 
     const rows = entries.map((entry) =>
-      entry.kind === "folder" ? folderRow(entry.folder, entry.depth) : documentRow(entry.document, entry.depth),
+      entry.kind === "folder"
+        ? folderRow(entry.folder, entry.depth, counts.get(entry.folder.id) ?? 0)
+        : documentRow(entry.document, entry.depth),
     );
     list.replaceChildren(...rows);
   }
@@ -952,14 +957,17 @@ export function createSidebar({
   async function handleFolderDelete(folder: FolderMeta): Promise<void> {
     try {
       await deleteFolder(folder.id);
-      folders = folders.filter((entry) => entry.id !== folder.id);
-      // The server cascaded; refetch documents to drop the subtree's.
-      documents = await listDocuments();
-      let next: DocumentMeta | null = null;
-      if (selectedId !== null && !documents.some((document) => document.id === selectedId)) {
-        next = documents[0] ?? null;
-        selectedId = next?.id ?? null;
+      // The directory is the cascade: refetch both halves rather than
+      // guessing which descendants went with it.
+      [documents, folders] = await Promise.all([listDocuments(), listFolders()]);
+      if (selectedId === null || documents.some((document) => document.id === selectedId)) {
+        renderList();
+        return;
       }
+      // The open document was inside the deleted subtree: show the first
+      // survivor, or blank the editor when none is left.
+      const next = documents[0] ?? null;
+      selectedId = next?.id ?? null;
       renderList();
       onDocumentDeleted(next?.id ?? null);
     } catch (error) {
@@ -973,16 +981,19 @@ export function createSidebar({
     renderList();
   }
 
-  /** The editor tells the sidebar which document is on screen. */
-  function setSelected(id: string | null): void {
-    selectedId = id;
-    renderList();
-  }
-
   void (async () => {
     try {
+      // Resolve what to open *before* listing: on a library with no
+      // documents yet this creates the first one, so it is already part
+      // of the list that renders below. Letting the editor create it
+      // instead left a file on disk that this list never had - visible
+      // in the folder, absent from the sidebar, and written to by an
+      // editor that looked empty.
+      const active = await resolveActiveDocument();
       [documents, folders] = await Promise.all([listDocuments(), listFolders()]);
+      selectedId = active.id;
       renderList();
+      onOpenDocument(active.id);
     } catch (error) {
       console.error("[sidebar]", error);
     }

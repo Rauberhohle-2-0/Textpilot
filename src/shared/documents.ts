@@ -2,8 +2,10 @@
  * The document type, shared by the server (storage, API) and the
  * renderer (sidebar, editor).
  *
- * A document is Markdown - the format of record - plus the metadata the
- * sidebar needs to list it without loading its text.
+ * A document is a `.md` file in the user's Textpilot folder plus the
+ * metadata the sidebar needs to list it without loading its text. Its
+ * `id` is the file's place in the tree, so the title is the filename
+ * itself; the filesystem is the source of truth.
  */
 export interface DocumentMeta {
   readonly id: string;
@@ -11,19 +13,24 @@ export interface DocumentMeta {
   readonly updatedAt: string;
   /** The folder this document lives in; null = sidebar root. */
   readonly parentId?: string | null;
-  /** Order within its level; float, midpoint-assigned on drag. */
-  readonly position?: number;
 }
 
 export interface DocumentRecord extends DocumentMeta {
   readonly text: string;
 }
 
+/** 2 MB of Markdown is far beyond any honest document. */
+export const MAX_DOCUMENT_BYTES = 2_000_000;
+
 /**
- * The display title of a document: its first non-empty line as plain
- * text, with markdown and inline HTML stripped for the sidebar. Empty
- * or untitled documents get a stable fallback so a row always has a
- * name.
+ * The title a document's text suggests: its first non-empty line as
+ * plain text, with markdown and inline HTML stripped. Empty or untitled
+ * documents get a stable fallback so a name always exists.
+ *
+ * This is a *name*, not a display string. It is deliberately not
+ * truncated here: a title becomes a filename, and a name cut short with
+ * an ellipsis is a lie on disk - `sanitizeName` owns the filesystem's
+ * length limit, and the sidebar lets CSS clip what it shows.
  */
 export function deriveTitle(markdown: string): string {
   for (const rawLine of markdown.split("\n")) {
@@ -64,8 +71,7 @@ export function deriveTitle(markdown: string): string {
     line = line.replace(/\s+/g, " ").trim();
     if (line.length === 0) continue;
 
-    const title = line.length > 0 ? line : "Untitled";
-    return title.length > 60 ? `${title.slice(0, 57).trimEnd()}…` : title;
+    return line;
   }
   return "Untitled";
 }

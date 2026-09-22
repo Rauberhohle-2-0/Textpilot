@@ -8,9 +8,9 @@
  */
 import { appendFileSync, mkdirSync, truncateSync } from "node:fs";
 import { dirname } from "node:path";
+import { format } from "../format.ts";
 import type { LogEntry } from "../logger.ts";
 import type { Transport } from "../transport.ts";
-import { format } from "./console.ts";
 
 export interface FileTransportOptions {
   /** Log file path; missing parent directories are created. */

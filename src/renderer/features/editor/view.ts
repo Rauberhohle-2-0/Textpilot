@@ -15,7 +15,7 @@ import { createElement, icons } from "lucide";
 import type { Component } from "../../core/component.ts";
 import { h } from "../../core/dom.ts";
 import { documentToMarkdown, markdownToDocumentHtml, looksLikeLegacyHtml } from "../../../shared/markdown.ts";
-import { loadDocument, resolveActiveDocument, saveDocument } from "./api.ts";
+import { loadDocument, saveDocument } from "../../backend/documents.ts";
 import { createToolbar } from "./toolbar.ts";
 import { installInputRules } from "./input-rules.ts";
 import { EditorStore } from "./store.ts";
@@ -23,11 +23,16 @@ import { EditorStore } from "./store.ts";
 const SAVE_DEBOUNCE_MS = 600;
 
 export interface EditorOptions {
-  /** Called with human-readable status text whenever it changes. */
-  onStatus?(status: string): void;
+  /**
+   * Where the save status docks - the title-bar band above the editor.
+   * Required on purpose: the status is chrome that belongs to the shell,
+   * and a `document` lookup here would silently fall back to <body>,
+   * leaving it floating at the wrong edge of the window.
+   */
+  statusSlot: HTMLElement;
 }
 
-export function createEditor({ onStatus = () => {} }: EditorOptions = {}): Component<HTMLDivElement> & {
+export function createEditor({ statusSlot }: EditorOptions): Component<HTMLDivElement> & {
   /** Open a document by id; the save path follows the open one. */
   openDocument(id: string): Promise<void>;
   /** Clear the editor when no document is left to show. */
@@ -38,7 +43,9 @@ export function createEditor({ onStatus = () => {} }: EditorOptions = {}): Compo
   const surface = h("div", {
     id: "writable-space",
     class: EDITOR_CLASS,
-    contenteditable: true,
+    // Editable only once a document is open; `syncEditable` turns it on
+    // when one arrives. See that function for why.
+    contenteditable: false,
     spellcheck: false,
     "data-placeholder": "Start writing…",
     "aria-label": "Document",
@@ -88,11 +95,14 @@ export function createEditor({ onStatus = () => {} }: EditorOptions = {}): Compo
 
   const statusIcon = h("span", { class: "status-icon", "aria-hidden": "true" });
   const statusText = h("span", { class: "status-text" }, "Loading…");
+  // A live region: the save state changes on its own while the writer
+  // types, so it has to announce itself rather than wait to be read.
   const statusBar = h(
-    "footer",
-    { class: "status-bar" },
+    "div",
+    { class: "status-bar", role: "status" },
     h("span", { class: "status-group" }, statusIcon, statusText),
   );
+  statusSlot.append(statusBar);
 
   const root = h(
     "div",
@@ -100,7 +110,6 @@ export function createEditor({ onStatus = () => {} }: EditorOptions = {}): Compo
     surface,
     source,
     toolbar,
-    statusBar,
   );
 
   /**
@@ -145,7 +154,8 @@ export function createEditor({ onStatus = () => {} }: EditorOptions = {}): Compo
   }
   root.addEventListener("keydown", onKeyDown);
 
-  const unsubscribe = store.subscribe(({ markdown, saving, loaded }) => {
+  const unsubscribe = store.subscribe(({ markdown, saving, loaded, documentId }) => {
+    syncEditable(documentId);
     // Re-render only when the document itself changed - not when the
     // `saving` flag toggles. Rewriting innerHTML while the save status
     // flickers would drop the caret mid-sentence and restyle the DOM
@@ -155,8 +165,29 @@ export function createEditor({ onStatus = () => {} }: EditorOptions = {}): Compo
       surface.innerHTML = markdownToDocumentHtml(markdown);
       renderedMarkdown = markdown;
     }
-    renderStatus(statusIcon, statusText, saving, loaded);
+    renderStatus(statusIcon, statusText, saving, loaded, documentId !== null);
   });
+
+  /**
+   * Accept input only while a document is open.
+   *
+   * The document is handed to the editor from outside - the sidebar
+   * resolves one at boot and opens it - so there is a window where the
+   * surface exists but has no document id. Typing in that window lost
+   * the text twice: `persist` needs an id and gave up without one, and
+   * the load that landed next re-rendered the surface from the file,
+   * erasing what had been typed. A read-only surface cannot lose a
+   * keystroke it never accepted.
+   */
+  function syncEditable(documentId: string | null): void {
+    const editable = documentId !== null;
+    if (surface.isContentEditable !== editable) surface.contentEditable = String(editable);
+    source.readOnly = !editable;
+    // The placeholder invites writing, so it follows the same state: a
+    // read-only surface must not ask for text it will drop.
+    const placeholder = editable ? "Start writing…" : "No document open";
+    if (surface.dataset.placeholder !== placeholder) surface.dataset.placeholder = placeholder;
+  }
 
   surface.addEventListener("input", commitLocalEdit);
 
@@ -180,9 +211,7 @@ export function createEditor({ onStatus = () => {} }: EditorOptions = {}): Compo
     store.set({ saving: true });
     try {
       await saveDocument(id, store.state.markdown);
-      onStatus("Saved");
     } catch (error) {
-      onStatus("Save failed - will retry on next change");
       report(error);
     } finally {
       store.set({ saving: false });
@@ -219,9 +248,11 @@ export function createEditor({ onStatus = () => {} }: EditorOptions = {}): Compo
         surface.innerHTML = markdownToDocumentHtml(markdown);
         renderedMarkdown = markdown;
       }
-      onStatus("Ready");
     } catch (error) {
-      onStatus("Could not open that document");
+      // Settle the status line rather than spin forever. The document id
+      // stays null, so the surface stays read-only - honest about having
+      // nowhere to save.
+      store.set({ loaded: true });
       report(error);
     }
   }
@@ -242,25 +273,12 @@ export function createEditor({ onStatus = () => {} }: EditorOptions = {}): Compo
     renderedMarkdown = "";
     surface.innerHTML = "";
     source.value = "";
-    onStatus("Ready");
   }
 
-  void (async () => {
-    try {
-      const document = await resolveActiveDocument();
-      const markdown = looksLikeLegacyHtml(document.text)
-        ? documentToMarkdown(document.text) // one-time migration of pre-markdown saves
-        : document.text;
-      // Do not seed `renderedMarkdown` here: the subscriber must see a
-      // change to run the initial render of the loaded document.
-      store.set({ markdown, documentId: document.id, loaded: true });
-      onStatus("Ready");
-    } catch (error) {
-      store.set({ loaded: true });
-      onStatus("Could not load your notes");
-      report(error);
-    }
-  })();
+  // No boot fetch here on purpose: the sidebar resolves which document
+  // to open (creating the first one when the library is empty) and calls
+  // `openDocument`. Resolving it here as well is what produced a file the
+  // sidebar had never heard of.
 
   return {
     element: root,
@@ -272,6 +290,7 @@ export function createEditor({ onStatus = () => {} }: EditorOptions = {}): Compo
       root.removeEventListener("keydown", onKeyDown);
       toolbar.destroy?.();
       unsubscribe();
+      statusBar.remove();
     },
   };
 }
@@ -281,13 +300,16 @@ function renderStatus(
   textHost: HTMLElement,
   saving: boolean,
   loaded: boolean,
+  hasDocument: boolean,
 ): void {
   iconHost.replaceChildren(iconFor(saving, loaded));
   textHost.textContent = !loaded
     ? "Loading…"
-    : saving
-      ? "Saving…"
-      : "All changes saved";
+    : !hasDocument
+      ? "No document open"
+      : saving
+        ? "Saving…"
+        : "All changes saved";
 }
 
 function iconFor(saving: boolean, loaded: boolean): Node {

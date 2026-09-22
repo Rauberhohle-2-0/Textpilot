@@ -1,6 +1,5 @@
 {
   "name": "textpilot",
-  "module": "src/index.ts",
   "type": "module",
   "private": true,
   "scripts": {
@@ -9,9 +8,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "expo": "57.0.24",
     "hono": "4.13.8",
-    "htmx.org": "^2.0.10",
     "lucide": "^1.46.0",
     "markdown-it": "^15.0.2",
     "sanitize-html": "^2.17.7",

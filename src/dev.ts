@@ -18,10 +18,10 @@ import { join } from "node:path";
 import { buildRuntimeConfig } from "@vantail/cli";
 import { resolveRuntimeBinary } from "@vantail/runtime";
 import { bootstrap } from "./bootstrap.ts";
-import { projectRoot } from "./config/app.ts";
+import { API_PREFIX, projectRoot } from "./config/app.ts";
 import config from "../vantail.config.ts";
 
-const { app, logger } = bootstrap();
+const { app, logger } = await bootstrap();
 const devLogger = logger.child("dev");
 
 const runtime = resolveRuntimeBinary({ cwd: projectRoot });
@@ -39,8 +39,17 @@ const vite = await createServer({
     port: vitePort,
     strictPort: true,
     host: "127.0.0.1",
+    // No `changeOrigin`: the API checks that the Host it is addressed
+    // to is loopback and that a browser's Origin agrees with it, and
+    // rewriting Host to the internal API port would make every proxied
+    // request look cross-origin. Both are 127.0.0.1, so leaving the
+    // Host alone is also the honest thing to send.
+    //
+    // The key ends in a slash because this is a *prefix* match: a bare
+    // "/api" also swallows renderer modules served from a directory
+    // called `api-something`, handing them to the backend as 404s.
     proxy: {
-      "/api": { target: apiOrigin, changeOrigin: true },
+      [`${API_PREFIX}/`]: { target: apiOrigin },
     },
   },
 });

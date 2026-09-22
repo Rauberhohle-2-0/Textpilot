@@ -5,7 +5,8 @@ import { join } from "node:path";
 import { Logger } from "../../src/logging/logger.ts";
 import type { LogEntry } from "../../src/logging/logger.ts";
 import type { Transport } from "../../src/logging/transport.ts";
-import { ConsoleTransport, format } from "../../src/logging/transports/console.ts";
+import { format } from "../../src/logging/format.ts";
+import { ConsoleTransport } from "../../src/logging/transports/console.ts";
 import { FileTransport } from "../../src/logging/transports/file.ts";
 
 /** A transport that keeps entries in memory - for asserting on logs. */
