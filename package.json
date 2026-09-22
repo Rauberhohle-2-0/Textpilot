@@ -4,12 +4,15 @@
   "private": true,
   "scripts": {
     "dev": "bun run src/dev.ts",
+    "build": "bun run build.ts",
+    "package": "bun run build.ts && bunx @vantail/cli package --no-build --installer",
     "test": "bun test",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@vantail/api": "0.1.21",
     "hono": "4.13.8",
-    "lucide": "^1.46.0",
+    "lucide": "^1.47.0",
     "markdown-it": "^15.0.2",
     "sanitize-html": "^2.17.7",
     "turndown": "^7.2.4"

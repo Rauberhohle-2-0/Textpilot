@@ -301,18 +301,14 @@
      runtime reports - never hardcoded - so the strip is exactly the band
      the runtime drags the window from and maximises on double-click.
      Empty and non-interactive on purpose: anything clickable or editable
-     here would make the runtime hand the press back to the page instead. */
+     here would make the runtime hand the press back to the page instead.
+     Document state lives in the floating top bar over the editor, so
+     this band stays a pure drag surface. */
   .titlebar-spacer {
     flex: none;
     height: var(--vantail-titlebar-height, 36px);
     padding-left: var(--vantail-titlebar-inset-left, 0px);
     padding-right: var(--vantail-titlebar-inset-right, 0px);
-    /* The save status docks at the right end of this band; everywhere
-       else it stays empty so the runtime still reads an empty-space
-       press as "drag the window". */
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
     user-select: none;
     -webkit-user-select: none;
   }
@@ -341,6 +337,22 @@
        JS, because the pill is `display: none` whenever the rail is open
        and a measurement taken then would silently read 0. */
     --titlebar-controls-width: 7.125rem;
+    /* Equal edge distance for every floating pill: the formatting
+       toolbar sits 2rem off the bottom edge, so the two top pills sit
+       2rem off the top edge. One token - never three copies - so the
+       symmetry survives future tweaks. */
+    --pill-edge: 2rem;
+    /* The editor's visible left edge: the floating panel's width plus
+       both float gaps - the same arithmetic .editor-column pads with.
+       The top bar is viewport-fixed (so it shares the controls pill's
+       top line), and this offset re-centers it over the visible editor
+       instead of the whole window. Tracks --sidebar-width live, since
+       that var is what the resize handle writes. */
+    --editor-offset: calc(var(--sidebar-width, 17rem) + var(--sidebar-float-gap, 0.75rem) * 2);
+  }
+
+  body.sidebar-hidden {
+    --editor-offset: 0px;
   }
 
   .sidebar {
@@ -505,7 +517,7 @@
      in-flow wide-button rule, or that rule keeps it visible.) */
   .titlebar-controls {
     position: fixed;
-    top: var(--sidebar-float-gap);
+    top: var(--pill-edge, 2rem);
     right: var(--sidebar-float-gap);
     z-index: 40;
     display: none;
@@ -1254,7 +1266,7 @@
      lift - so the two glass capsules read as one family. */
   .toolbar {
     position: absolute;
-    bottom: 2rem;
+    bottom: var(--pill-edge, 2rem);
     left: 50%;
     transform: translateX(-50%);
     z-index: 20;
@@ -1324,57 +1336,135 @@
     height: 1.05rem;
   }
 
-  /* The save status: the right end of the title-bar band above the
-     editor - where macOS puts document state, out of the writing flow,
-     and opposite the sidebar's controls on the left. It used to be a
-     fixed footer spanning the window's bottom edge, which put the least
-     interesting state in a corner the eye visits, competed with the
-     floating toolbar 2rem above it, and needed three special cases to
-     follow the sidebar's collapse (a `left` override, a transition
-     suspension and an inverted transition list). None of that survives
-     here: the band already spans exactly the editor column.
-     Passive by design - presses fall through to the band's drag region. */
-  .status-bar {
+  /* The floating top bar: a centered glass pill with the save state +
+     word count + reading time. Same container recipe as the formatting
+     toolbar and the collapsed reopen pill - faint top-down white tint
+     over the blur, hairline light border, inner top-light catch and one
+     soft lift - so all glass capsules read as one family. Passive by
+     design: presses fall through to the text underneath, so the bar
+     never steals the caret or blocks selection.
+     Viewport-fixed at the same top as the collapsed controls pill, so
+     the two sit on one line; `margin-left` shifts its center from the
+     window middle to the visible editor's middle, gliding with the
+     sidebar on the rail's own spring. Same box metrics as the controls
+     pill (0.3rem padding around 2rem content + hairline ring), so the
+     two      pills stand equally tall. */
+  .doc-topbar {
+    position: fixed;
+    top: var(--pill-edge, 2rem);
+    left: 50%;
+    margin-left: calc(var(--editor-offset, 0px) / 2);
+    transform: translateX(-50%);
+    z-index: 40;
+    box-sizing: border-box;
     display: flex;
     align-items: center;
-    margin-right: 1rem;
+    gap: 0.6rem;
+    max-width: calc(100% - 2rem);
+    min-height: calc(2rem + 0.6rem + 2px);
+    padding: 0.3rem 1rem;
+    border: 1px solid rgb(255 255 255 / 0.1);
+    border-radius: 999px;
+    background: linear-gradient(
+      to bottom,
+      rgb(255 255 255 / 0.08),
+      rgb(255 255 255 / 0.03)
+    );
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.1),
+      0 4px 16px rgb(0 0 0 / 0.25);
+    backdrop-filter: blur(20px) saturate(1.4);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
     font-family: ui-sans-serif, -apple-system, system-ui, sans-serif;
-    font-size: 0.75rem;
+    font-size: 0.8125rem;
     color: var(--text-secondary);
     pointer-events: none;
     user-select: none;
     -webkit-user-select: none;
     white-space: nowrap;
-    transition: margin-right var(--sidebar-collapse-duration) var(--sidebar-collapse-ease);
+    overflow: hidden;
+    transition: margin-left var(--sidebar-collapse-duration) var(--sidebar-collapse-ease);
   }
 
-  /* With the rail collapsed its control pill takes this corner, so the
-     status steps left of it: the pill's own right offset + its width +
-     a breath. It slides with the pill's arrival on the rail's own
-     spring, rather than occupying dead space beside an empty corner
-     while the rail is open. */
-  body.sidebar-hidden .status-bar {
-    margin-right: calc(
-      var(--sidebar-float-gap) + var(--titlebar-controls-width) + 0.75rem
-    );
-  }
-
-  .status-group {
+  .doc-topbar-group {
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
   }
 
-  .status-svg {
-    width: 0.85rem;
-    height: 0.85rem;
+  /* A 2rem cell that centers the save icon exactly the way the
+     controls pill centers its own icons inside 2rem buttons, so the
+     whitespace above the glyph matches the reference. */
+  .doc-topbar-save {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 1.1rem;
+    height: 2rem;
   }
 
-  .status-svg--spin {
-    animation: status-spin 1.2s linear infinite;
+  .doc-topbar-save-text[hidden] {
+    display: none;
   }
 
-  @keyframes status-spin {
+  .doc-topbar-separator {
+    width: 1px;
+    height: 1.1rem;
+    flex: none;
+    background: var(--separator);
+  }
+
+  .doc-topbar-stat {
+    font-variant-numeric: tabular-nums;
+    /* Fill the 2rem content row exactly: glyphs center by line-height,
+       so the space above the text is the pill's own 0.3rem padding -
+       the same construction as the reference pill. */
+    line-height: 2rem;
+  }
+
+  .doc-topbar-stat--dim {
+    color: var(--text-tertiary);
+  }
+
+  .doc-topbar-svg {
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+
+  /* Save state as color: green at rest, red while working. */
+  .doc-topbar-svg--saved {
+    color: #34c759;
+  }
+
+  .doc-topbar-svg--busy {
+    color: #ff3b30;
+  }
+
+  .doc-topbar-svg--empty {
+    color: var(--text-tertiary);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .doc-topbar-svg--saved {
+      color: #30d158;
+    }
+    :root:not([data-theme="light"]) .doc-topbar-svg--busy {
+      color: #ff453a;
+    }
+  }
+
+  :root[data-theme="dark"] .doc-topbar-svg--saved {
+    color: #30d158;
+  }
+
+  :root[data-theme="dark"] .doc-topbar-svg--busy {
+    color: #ff453a;
+  }
+
+  .doc-topbar-svg--spin {
+    animation: doc-topbar-spin 1.2s linear infinite;
+  }
+
+  @keyframes doc-topbar-spin {
     to {
       transform: rotate(360deg);
     }
@@ -1527,8 +1617,11 @@
     .sidebar-actions .sidebar-new-folder-button,
     .sidebar-row,
     .editor-column,
-    .status-bar {
+    .doc-topbar {
       transition: none !important;
+    }
+    .doc-topbar-svg--spin {
+      animation: none !important;
     }
   }
 }

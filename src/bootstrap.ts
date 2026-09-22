@@ -10,7 +10,7 @@
 import { appConfig, ignoredPortEnv } from "./config/app.ts";
 import { createLogger } from "./logging/index.ts";
 import { Logger } from "./logging/logger.ts";
-import { createApp } from "./server/app.ts";
+import { createApp, type CreateAppOptions } from "./server/app.ts";
 import { migrateIntoTextpilot } from "./server/features/migration/migrate-into-textpilot.ts";
 
 export interface Bootstrap {
@@ -18,7 +18,7 @@ export interface Bootstrap {
   logger: Logger;
 }
 
-export async function bootstrap(): Promise<Bootstrap> {
+export async function bootstrap(appOptions?: CreateAppOptions): Promise<Bootstrap> {
   const logger = createLogger();
   logger.info(`${appConfig.name} ${appConfig.version} starting`, {
     identifier: appConfig.identifier,
@@ -36,5 +36,5 @@ export async function bootstrap(): Promise<Bootstrap> {
     logger,
   });
 
-  return { app: createApp({ logger }), logger };
+  return { app: createApp({ logger, ...appOptions }), logger };
 }

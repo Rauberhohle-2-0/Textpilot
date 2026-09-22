@@ -25,12 +25,14 @@ import {
   renameSync,
   rmSync,
   statSync,
+  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, join, sep } from "node:path";
 import {
   deriveTitle,
   MAX_DOCUMENT_BYTES,
+  utf8ByteLength,
   type DocumentMeta,
   type DocumentRecord,
 } from "../../../shared/documents.ts";
@@ -300,12 +302,60 @@ export function createFilesystemLibrary({
   // Writes
   // ---------------------------------------------------------------
 
-  /** Write through a sibling temp file and rename, as everywhere else. */
+  /** Write through a sibling temp file and rename, as everywhere else.
+   *
+   * Hardened: the temp name carries the pid plus randomness so two
+   * concurrent saves never share it, a pre-planted symlink at the temp
+   * path is removed instead of followed, and the file is created with
+   * `wx` so an existing file is never silently overwritten.
+   */
   function writeAtomic(absolutePath: string, text: string): void {
     mkdirSync(dirname(absolutePath), { recursive: true });
-    const temp = `${absolutePath}.tmp`;
-    writeFileSync(temp, text);
-    renameSync(temp, absolutePath);
+    const temp =
+      `${absolutePath}.${process.pid}.` +
+      `${Math.random().toString(36).slice(2)}.tmp`;
+    try {
+      writeFileSync(temp, text, { flag: "wx" });
+    } catch (error) {
+      // A leftover temp from a crashed run would otherwise wedge every
+      // future save with EEXIST; one retry after removing it is safe
+      // because the name is unique to this process.
+      if (
+        error instanceof Error &&
+        "code" in error &&
+        (error as NodeJS.ErrnoException).code === "EEXIST"
+      ) {
+        try {
+          unlinkSync(temp);
+        } catch {
+          // Already gone.
+        }
+        writeFileSync(temp, text, { flag: "wx" });
+      } else {
+        throw error;
+      }
+    }
+    // The temp path is unpredictable (pid + randomness), but verify we
+    // did not write through a planted symlink before renaming into place.
+    try {
+      if (lstatSync(temp).isSymbolicLink()) {
+        unlinkSync(temp);
+        throw new Error(`refusing to rename through symlink: ${temp}`);
+      }
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith("refusing")) throw error;
+      // lstat failed: temp vanished mid-write; let rename surface it.
+    }
+    try {
+      renameSync(temp, absolutePath);
+    } catch (renameError) {
+      try {
+        unlinkSync(temp);
+      } catch {
+        // Best effort cleanup.
+      }
+      throw renameError;
+    }
   }
 
   // ---------------------------------------------------------------
@@ -321,6 +371,7 @@ export function createFilesystemLibrary({
     },
 
     async create(text = "", parentId = null) {
+      if (utf8ByteLength(text) > MAX_DOCUMENT_BYTES) throw new DocumentTooLargeError("new document");
       const directory = resolveDir(parentId);
       const base = sanitizeName(deriveTitle(text));
       const name = uniqueName(directory, base, MARKDOWN_EXTENSION);
@@ -339,10 +390,11 @@ export function createFilesystemLibrary({
     },
 
     async save(id, text) {
+      if (utf8ByteLength(text) > MAX_DOCUMENT_BYTES) throw new DocumentTooLargeError(id);
       const { absolute } = documentLocation(id);
       if (!isFile(absolute)) throw new DocumentNotFoundError(id);
       writeAtomic(absolute, text);
-      log?.debug("document saved", { id, bytes: text.length });
+      log?.debug("document saved", { id, bytes: utf8ByteLength(text) });
       return recordFor(absolute, text);
     },
 
@@ -449,11 +501,45 @@ export function createFilesystemLibrary({
     async delete(id) {
       const source = folderLocation(id);
       if (source === null) return false;
+      // Defense in depth for the recursive remove below: the id codec
+      // can never name the root (empty path) or a hidden entry, but a
+      // recursive rm must never depend on a single upstream check.
+      if (source === root) return false;
+      if (basename(source).startsWith(".")) return false;
+      const rel = relativeToRoot(root, source);
+      if (rel === "" || rel.startsWith("..") || rel.startsWith(".")) return false;
+      // Re-verify it is a real directory, not a symlink swapped in
+      // between lookup and removal.
+      try {
+        if (!lstatSync(source).isDirectory() || lstatSync(source).isSymbolicLink()) return false;
+      } catch {
+        return false;
+      }
+      // Count the blast radius before it is gone, so the log says what
+      // a UI confirmation should have described.
+      let entries = 0;
+      try {
+        const tree = walk();
+        const under = (relPath: string): boolean =>
+          relPath === rel || relPath.startsWith(`${rel}/`);
+        entries =
+          tree.folders.filter((f) => {
+            const p = decodeId(f.id);
+            return p !== null && under(p);
+          }).length +
+          tree.documents.filter((d) => {
+            const p = decodeId(d.id);
+            return p !== null && under(p);
+          }).length;
+      } catch {
+        entries = 0;
+      }
       try {
         // The subtree is the directory: removing it removes every child
-        // folder and document with it.
+        // folder and document with it. The UI must confirm this; the
+        // server refuses the cases above that must never be removed.
         rmSync(source, { recursive: true, force: true });
-        log?.info("folder deleted", { id });
+        log?.info("folder deleted", { id, entries });
         return true;
       } catch {
         return false;

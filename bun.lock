@@ -5,8 +5,9 @@
     "": {
       "name": "textpilot",
       "dependencies": {
+        "@vantail/api": "0.1.21",
         "hono": "4.13.8",
-        "lucide": "^1.46.0",
+        "lucide": "^1.47.0",
         "markdown-it": "^15.0.2",
         "sanitize-html": "^2.17.7",
         "turndown": "^7.2.4",
@@ -211,6 +212,8 @@
 
     "@typescript/typescript-win32-x64": ["@typescript/typescript-win32-x64@7.0.2", "", { "os": "win32", "cpu": "x64" }, "sha512-0BQ3HkAHHlKLSp1qRvf3SUhGpGsDuhB/jgFw75guyqbxJqEaS0Cw/VFO8i2nHglJUzQCRtMMR/IBAKE3ETMC4g=="],
 
+    "@vantail/api": ["@vantail/api@0.1.21", "", {}, "sha512-FWQjQh45yTcDs4aaY673OEmnzsMK+lPNyqZP+AJfUS3V+iBUIY1Z+zFv1pG083ZkWqcPoEvoNnsxMgs6WX5j0g=="],
+
     "@vantail/cli": ["@vantail/cli@0.1.21", "", { "dependencies": { "@vantail/runtime": "^0.1.21", "@vantail/shared": "^0.1.21", "@vantail/vite": "^0.1.21" }, "peerDependencies": { "vite": "^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0" }, "bin": { "vantail": "dist/bin.js" } }, "sha512-XcG4jywlOlbgRqCADDEci7zVFiekwgXrOdd5dk9G8xV9aTW6xtaTWQmfFZRKIq300cfK8cWiNymYyk9C7C1t5A=="],
 
     "@vantail/runtime": ["@vantail/runtime@0.1.21", "", { "optionalDependencies": { "@vantail/runtime-darwin-arm64": "0.1.21", "@vantail/runtime-darwin-arm64-sqlcipher": "0.1.21", "@vantail/runtime-linux-arm64": "0.1.21", "@vantail/runtime-linux-arm64-sqlcipher": "0.1.21", "@vantail/runtime-linux-x64": "0.1.21", "@vantail/runtime-linux-x64-sqlcipher": "0.1.21", "@vantail/runtime-win32-arm64": "0.1.21", "@vantail/runtime-win32-arm64-sqlcipher": "0.1.21", "@vantail/runtime-win32-x64": "0.1.21", "@vantail/runtime-win32-x64-sqlcipher": "0.1.21" } }, "sha512-FqwC0aajQ8LnMu4MOvHakhqvg/LHr+psoe9VQEl3ar8r/PyrMyfbwlGFXnJ3H+tvYAGV007AHqvGB3mWA6A9Eg=="],
@@ -307,7 +310,7 @@
 
     "linkify-it": ["linkify-it@6.1.0", "", { "dependencies": { "uc.micro": "^3.0.0" } }, "sha512-wJ/TwpSDTLepCrQoYWYIExIKg5Zchex2Nn5yk2mFnB+6PtdkHtyLx742md9csRjjOnGkKIS/RrbY7l8D6gT9Vw=="],
 
-    "lucide": ["lucide@1.46.0", "", {}, "sha512-JAkmhp9rxxIAeyKZJPUdiDDz8szXEISxdd4elBp7nu75MWQIYQQ8p1u+conDwu7RG2TrESj3wo5G0dKNs/5ryA=="],
+    "lucide": ["lucide@1.47.0", "", {}, "sha512-gJoVJM5fvpBDGZTvhpJS9IEurz85HbD+wgOlCkXCIw35tHrqTxSdIYUN9sXvs7Aw3NCl67A+nlotNyoU4u7zOQ=="],
 
     "magic-string": ["magic-string@0.30.21", "", { "dependencies": { "@jridgewell/sourcemap-codec": "^1.5.5" } }, "sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ=="],
 

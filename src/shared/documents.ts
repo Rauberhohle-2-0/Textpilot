@@ -23,6 +23,18 @@ export interface DocumentRecord extends DocumentMeta {
 export const MAX_DOCUMENT_BYTES = 2_000_000;
 
 /**
+ * UTF-8 byte length of a document string.
+ *
+ * `String.length` counts UTF-16 code units, so an emoji-heavy document
+ * can be several times larger on disk than `length` suggests. Every
+ * size gate must use bytes, matching what `stat` reports. `TextEncoder`
+ * keeps this isomorphic (renderer + server + tests).
+ */
+export function utf8ByteLength(text: string): number {
+  return new TextEncoder().encode(text).length;
+}
+
+/**
  * The title a document's text suggests: its first non-empty line as
  * plain text, with markdown and inline HTML stripped. Empty or untitled
  * documents get a stable fallback so a name always exists.

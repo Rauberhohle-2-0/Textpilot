@@ -13,7 +13,19 @@ const accessLogger = logger.child("main");
 // The built renderer (vite build -> dist/renderer), resolved against the
 // project root like every other path here: a run started from another
 // directory must still find its own files.
-app.use(serveStatic({ root: join(projectRoot, "dist", "renderer") }));
+//
+// Scoped on purpose: the API is JSON-only and must never fall through
+// to a file. Only GET/HEAD outside /api reach the static handler, and
+// dotfiles (source maps aside, anything under /. ) never do - they fall
+// through to the greeting page / 404 instead of leaking.
+const serveRenderer = serveStatic({ root: join(projectRoot, "dist", "renderer") });
+app.use(async (c, next) => {
+  if (c.req.method !== "GET" && c.req.method !== "HEAD") return next();
+  const path = c.req.path;
+  if (path === "/api" || path.startsWith("/api/")) return next();
+  if (path.includes("/.")) return next();
+  return serveRenderer(c, next);
+});
 
 const server = Bun.serve({
   port: appConfig.server.port,

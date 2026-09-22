@@ -115,6 +115,9 @@ dist
 # Vantail
 .vantail/
 
+# Vantail bundles and installers (`vantail package` writes `build/`)
+build/
+
 # Run logs (overwritten on every run)
 logs/
 

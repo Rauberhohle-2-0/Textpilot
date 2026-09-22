@@ -16,7 +16,7 @@ import { MAX_DOCUMENT_BYTES } from "../shared/documents.ts";
 import { createDocumentRoutes } from "./features/documents/index.ts";
 import { createFolderRoutes } from "./features/folders/index.ts";
 import { createFilesystemLibrary } from "./features/library/index.ts";
-import { jsonOnly, localOnly, sameOriginOnly } from "./middleware/local-only.ts";
+import { apiToken, jsonOnly, localOnly, sameOriginOnly } from "./middleware/local-only.ts";
 import { requestLogger } from "./middleware/request-logger.ts";
 import { apiRoutes } from "./routes/api.ts";
 import { greetingRoutes } from "./routes/greeting.ts";
@@ -29,13 +29,35 @@ export interface CreateAppOptions {
    * tests point this at a temp directory so they never touch real notes.
    */
   libraryRoot?: string;
+  /**
+   * Serve the greeting page at `/` and `/index.html`. Default `true`.
+   *
+   * The packaged sidecar sets this to `false`: there the window is handed
+   * the built renderer for those paths instead, and a greeting page would
+   * hide the app behind it.
+   */
+  greeting?: boolean;
 }
 
-/** Twice the document cap: room for JSON escaping, not for a huge body. */
-const MAX_BODY_BYTES = MAX_DOCUMENT_BYTES * 2;
+/** Three times the document cap: room for JSON escaping of hostile
+ * input (a document of all quotes doubles when serialized), not for a
+ * huge body. The routes re-check the decoded UTF-8 bytes. */
+const MAX_BODY_BYTES = MAX_DOCUMENT_BYTES * 3;
 
-export function createApp({ logger, libraryRoot }: CreateAppOptions = {}): Hono {
+export function createApp({ logger, libraryRoot, greeting = true }: CreateAppOptions = {}): Hono {
   const app = new Hono();
+
+  // Never leak filesystem paths, errno strings or stacks to a client:
+  // unexpected failures (a broken disk, a bug) all become the same
+  // generic 500, with the detail going to the log only.
+  app.onError((error, c) => {
+    logger?.error("unhandled request error", {
+      method: c.req.method,
+      path: c.req.path,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return c.json({ error: "internal error" }, 500);
+  });
 
   if (logger) {
     const accessLogger = logger.child("server");
@@ -47,6 +69,7 @@ export function createApp({ logger, libraryRoot }: CreateAppOptions = {}): Hono 
   // body limit sits before any handler that parses, so an oversized body
   // is refused instead of buffered.
   app.use(localOnly());
+  app.use("/api/*", apiToken());
   app.use("/api/*", sameOriginOnly());
   app.use(
     "/api/*",
@@ -72,11 +95,14 @@ export function createApp({ logger, libraryRoot }: CreateAppOptions = {}): Hono 
         baseUri: ["'none'"],
         formAction: ["'none'"],
         frameAncestors: ["'none'"],
+        frameSrc: ["'none'"],
       },
     }),
   );
 
-  app.route("/", greetingRoutes);
+  if (greeting) {
+    app.route("/", greetingRoutes);
+  }
   app.route("/api", apiRoutes);
 
   // One store for one filesystem: the documents routes and the folders

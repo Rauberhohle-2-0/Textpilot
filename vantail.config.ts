@@ -30,9 +30,68 @@ export default defineConfig({
     // look clipped). Capped by AppKit's button container if too large.
     trafficLightPosition: { x: 28, y: 22 },
   },
+  // Explicit app menu (docs/api.md#menu): without `menu` macOS installs the
+  // standard menu but labels it with the dev binary name ("vantail-runtime").
+  // Defining it here makes both `vantail dev` and the packaged build show
+  // "Textpilot". The Edit items are load-bearing on macOS: without copy /
+  // paste / undo / selectAll their shortcuts stop working everywhere.
+  menu: [
+    {
+      type: 'submenu',
+      label: 'Textpilot',
+      items: [
+        { type: 'predefined', item: 'about' },
+        { type: 'separator' },
+        { type: 'predefined', item: 'services' },
+        { type: 'separator' },
+        { type: 'predefined', item: 'hide' },
+        { type: 'predefined', item: 'hideOthers' },
+        { type: 'predefined', item: 'showAll' },
+        { type: 'separator' },
+        { type: 'predefined', item: 'quit' },
+      ],
+    },
+    {
+      type: 'submenu',
+      label: 'Edit',
+      items: [
+        { type: 'predefined', item: 'undo' },
+        { type: 'predefined', item: 'redo' },
+        { type: 'separator' },
+        { type: 'predefined', item: 'cut' },
+        { type: 'predefined', item: 'copy' },
+        { type: 'predefined', item: 'paste' },
+        { type: 'predefined', item: 'selectAll' },
+      ],
+    },
+    {
+      type: 'submenu',
+      label: 'Window',
+      items: [
+        { type: 'predefined', item: 'minimize' },
+        { type: 'predefined', item: 'maximize' },
+        { type: 'predefined', item: 'fullscreen' },
+        { type: 'separator' },
+        { type: 'predefined', item: 'closeWindow' },
+        { type: 'predefined', item: 'bringAllToFront' },
+      ],
+    },
+  ],
   permissions: {
     network: {
       allow: ['127.0.0.1', 'localhost'],
+    },
+    // The compiled server, shipped inside the bundle.
+    //
+    // `$RESOURCE` is the directory the packaged assets land in, so this
+    // names the binary `bun run build` wrote into `dist/`. Development
+    // never reaches this rule - there the window points straight at a
+    // server that is already running (`src/dev.ts`, `src/main.ts`).
+    //
+    // No arguments are allowed at all: `args: []` is a rule per position,
+    // and there are no positions.
+    shell: {
+      allow: [{ program: '$RESOURCE/server', args: [] }],
     },
   },
 })

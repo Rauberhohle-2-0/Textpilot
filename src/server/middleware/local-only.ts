@@ -2,7 +2,7 @@
  * Who may talk to this server, and what they may send.
  *
  * The app is a local desktop app with no accounts: anything that can
- * reach its loopback port can read and write the user's documents. Two
+ * reach its loopback port can read and write the user's documents. Three
  * request-level guards keep that surface to the app itself.
  *
  * - `localOnly` refuses any request whose `Host` is not a loopback name.
@@ -16,11 +16,19 @@
  *   or plain text, so this closes the "simple request" door - and the
  *   API means JSON anyway.
  * - `sameOriginOnly` refuses a request that declares itself foreign.
+ * - `apiToken` is opt-in defense in depth for the residual threat
+ *   model: any *local process* can reach loopback and pass the browser
+ *   guards (no Origin to check). When `TEXTPILOT_TOKEN` is set, `/api/*`
+ *   additionally requires `Authorization: Bearer <token>`; the bundled
+ *   renderer sends it from the `textpilot-api-token` meta tag when one
+ *   is present. Unset (the default for tests and plain `dev` runs)
+ *   means no token is required.
  *
- * The three overlap on purpose, and none of them trusts a header it did
+ * The guards overlap on purpose, and none of them trusts a header it did
  * not need to: a request that declares nothing is a local client, not a
  * browser, and is judged by its content type instead.
  */
+import { timingSafeEqual } from "node:crypto";
 import type { MiddlewareHandler } from "hono";
 
 /** Hostnames that mean "this machine". Ports are ignored. */
@@ -88,4 +96,34 @@ export function jsonOnly(): MiddlewareHandler {
     }
     await next();
   };
+}
+
+/**
+ * Opt-in bearer token for `/api/*`. Disabled when `TEXTPILOT_TOKEN` is
+ * unset or empty, so tests and plain dev runs behave as before. When
+ * set, the comparison is constant-time and the failure is a 401 without
+ * a `WWW-Authenticate` challenge (no browser login prompt wanted).
+ */
+export function apiToken(): MiddlewareHandler {
+  return async (c, next) => {
+    const expected = process.env.TEXTPILOT_TOKEN?.trim();
+    if (!expected) {
+      await next();
+      return;
+    }
+    const header = c.req.header("authorization") ?? "";
+    const match = /^Bearer (.+)$/.exec(header);
+    if (match && safeEqual(match[1]!, expected)) {
+      await next();
+      return;
+    }
+    return c.json({ error: "unauthorized" }, 401);
+  };
+}
+
+function safeEqual(a: string, b: string): boolean {
+  const ab = Buffer.from(a, "utf8");
+  const bb = Buffer.from(b, "utf8");
+  if (ab.length !== bb.length) return false;
+  return timingSafeEqual(ab, bb);
 }

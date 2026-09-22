@@ -12,7 +12,7 @@
  */
 import { Hono, type Context } from "hono";
 import type { Logger } from "../../../logging/logger.ts";
-import { MAX_DOCUMENT_BYTES } from "../../../shared/documents.ts";
+import { MAX_DOCUMENT_BYTES, utf8ByteLength } from "../../../shared/documents.ts";
 import { INVALID_ID, isValidId, parentIdOf } from "../../../shared/ids.ts";
 import {
   DocumentNotFoundError,
@@ -44,7 +44,7 @@ export function createDocumentRoutes({ store, logger }: DocumentRoutesOptions): 
     if (typeof text !== "string") {
       return c.json({ error: "expected { text?: string, parentId?: string | null }" }, 400);
     }
-    if (text.length > MAX_DOCUMENT_BYTES) {
+    if (utf8ByteLength(text) > MAX_DOCUMENT_BYTES) {
       return c.json({ error: "document too large" }, 413);
     }
     const parent = parentIdOf(body?.parentId);
@@ -68,17 +68,36 @@ export function createDocumentRoutes({ store, logger }: DocumentRoutesOptions): 
       | null;
     if (!body) return c.json({ error: "expected body" }, 400);
 
+    // Rename and move are exclusive operations: accepting both would let
+    // one silently win, and accepting neither turned `{}` into a move to
+    // the library root. Both cases are refused so the caller's intent is
+    // always explicit.
+    const wantsRename = typeof body.title === "string";
+    const wantsMove = body.parentId !== undefined;
+    if (wantsRename && wantsMove) {
+      return c.json({ error: "specify either title or parentId, not both" }, 400);
+    }
+    if (!wantsRename && !wantsMove) {
+      return c.json({ error: "expected { title: string } or { parentId: string | null }" }, 400);
+    }
+
+    if (wantsRename) {
+      try {
+        const document = await store.rename(id, (body.title as string).trim().slice(0, 200));
+        log?.info("document renamed", { id, to: document.id });
+        return c.json(document, 200);
+      } catch (error) {
+        return documentFailure(c, error);
+      }
+    }
+
     const parent = parentIdOf(body.parentId);
     if (parent === INVALID_ID) {
       return c.json({ error: "parentId must be a string or null" }, 400);
     }
-
     try {
-      const document =
-        typeof body.title === "string"
-          ? await store.rename(id, body.title.trim().slice(0, 200))
-          : await store.move(id, parent);
-      log?.info("document updated", { id, parentId: parent });
+      const document = await store.move(id, parent);
+      log?.info("document moved", { id, parentId: parent });
       return c.json(document, 200);
     } catch (error) {
       return documentFailure(c, error);
@@ -90,7 +109,7 @@ export function createDocumentRoutes({ store, logger }: DocumentRoutesOptions): 
     if (!isValidId(id)) return c.json({ error: "invalid document id" }, 400);
     try {
       const document = await store.load(id);
-      log?.debug("document loaded", { id, bytes: document.text.length });
+      log?.debug("document loaded", { id, bytes: utf8ByteLength(document.text) });
       return c.json(document, 200);
     } catch (error) {
       return documentFailure(c, error);
@@ -104,12 +123,12 @@ export function createDocumentRoutes({ store, logger }: DocumentRoutesOptions): 
     if (!body || typeof body.text !== "string") {
       return c.json({ error: "expected { text: string }" }, 400);
     }
-    if (body.text.length > MAX_DOCUMENT_BYTES) {
+    if (utf8ByteLength(body.text) > MAX_DOCUMENT_BYTES) {
       return c.json({ error: "document too large" }, 413);
     }
     try {
       const document = await store.save(id, body.text);
-      log?.info("document saved", { id, bytes: body.text.length });
+      log?.info("document saved", { id, bytes: utf8ByteLength(body.text) });
       return c.json(document, 200);
     } catch (error) {
       return documentFailure(c, error);

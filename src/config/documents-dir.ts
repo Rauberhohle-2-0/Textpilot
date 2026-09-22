@@ -13,7 +13,7 @@
  */
 import { spawnSync } from "node:child_process";
 import { homedir } from "node:os";
-import { join, resolve } from "node:path";
+import { isAbsolute, join, resolve } from "node:path";
 
 /** The folder the app owns inside Documents. */
 export const LIBRARY_FOLDER_NAME = "Textpilot";
@@ -21,8 +21,30 @@ export const LIBRARY_FOLDER_NAME = "Textpilot";
 /** The library root for this machine, honoring `TEXTPILOT_DIR`. */
 export function resolveLibraryRoot(env: NodeJS.ProcessEnv = process.env): string {
   const override = env.TEXTPILOT_DIR?.trim();
-  if (override) return resolve(override);
+  if (override) return assertSafeLibraryRoot(resolve(override));
   return join(documentsDirectory(), LIBRARY_FOLDER_NAME);
+}
+
+/**
+ * Refuse overrides that would put destructive operations (notably
+ * recursive folder delete) somewhere catastrophic: the filesystem
+ * root, the user's home, or the Documents folder itself. The library
+ * must be a dedicated directory, not a scope the app shares with the
+ * rest of the system. Throws at startup so a bad env fails fast.
+ */
+export function assertSafeLibraryRoot(resolved: string): string {
+  const home = homedir();
+  const documents = join(home, "Documents");
+  const forbidden = new Set([resolve("/"), home, documents]);
+  if (forbidden.has(resolved)) {
+    throw new Error(
+      `TEXTPILOT_DIR must be a dedicated library folder, not ${resolved}`,
+    );
+  }
+  if (!isAbsolute(resolved)) {
+    throw new Error(`TEXTPILOT_DIR must be an absolute path: ${resolved}`);
+  }
+  return resolved;
 }
 
 /** The user's Documents directory, best-effort for the current OS. */

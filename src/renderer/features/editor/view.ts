@@ -11,7 +11,6 @@
  * Saves are debounced: one request per typing pause, not one per
  * keystroke.
  */
-import { createElement, icons } from "lucide";
 import type { Component } from "../../core/component.ts";
 import { h } from "../../core/dom.ts";
 import { documentToMarkdown, markdownToDocumentHtml, looksLikeLegacyHtml } from "../../../shared/markdown.ts";
@@ -19,20 +18,13 @@ import { loadDocument, saveDocument } from "../../backend/documents.ts";
 import { createToolbar } from "./toolbar.ts";
 import { installInputRules } from "./input-rules.ts";
 import { EditorStore } from "./store.ts";
+import { createTopBar } from "../topbar/index.ts";
 
 const SAVE_DEBOUNCE_MS = 600;
 
-export interface EditorOptions {
-  /**
-   * Where the save status docks - the title-bar band above the editor.
-   * Required on purpose: the status is chrome that belongs to the shell,
-   * and a `document` lookup here would silently fall back to <body>,
-   * leaving it floating at the wrong edge of the window.
-   */
-  statusSlot: HTMLElement;
-}
+export type EditorOptions = Record<string, never>;
 
-export function createEditor({ statusSlot }: EditorOptions): Component<HTMLDivElement> & {
+export function createEditor(_options: EditorOptions = {}): Component<HTMLDivElement> & {
   /** Open a document by id; the save path follows the open one. */
   openDocument(id: string): Promise<void>;
   /** Clear the editor when no document is left to show. */
@@ -93,22 +85,17 @@ export function createEditor({ statusSlot }: EditorOptions): Component<HTMLDivEl
 
   const disposeInputRules = installInputRules({ target: surface, onChange: commitLocalEdit });
 
-  const statusIcon = h("span", { class: "status-icon", "aria-hidden": "true" });
-  const statusText = h("span", { class: "status-text" }, "Loading…");
-  // A live region: the save state changes on its own while the writer
-  // types, so it has to announce itself rather than wait to be read.
-  const statusBar = h(
-    "div",
-    { class: "status-bar", role: "status" },
-    h("span", { class: "status-group" }, statusIcon, statusText),
-  );
-  statusSlot.append(statusBar);
+  // The floating top bar: save state + document stats, centered over the
+  // document. It subscribes to the store itself, so the editor's own
+  // subscriber below stays about rendering text, not chrome.
+  const topBar = createTopBar(store);
 
   const root = h(
     "div",
     { class: "editor relative flex flex-col h-full w-full" },
     surface,
     source,
+    topBar,
     toolbar,
   );
 
@@ -154,8 +141,8 @@ export function createEditor({ statusSlot }: EditorOptions): Component<HTMLDivEl
   }
   root.addEventListener("keydown", onKeyDown);
 
-  const unsubscribe = store.subscribe(({ markdown, saving, loaded, documentId }) => {
-    syncEditable(documentId);
+  const unsubscribe = store.subscribe(({ markdown, loaded }) => {
+    syncEditable(store.state.documentId);
     // Re-render only when the document itself changed - not when the
     // `saving` flag toggles. Rewriting innerHTML while the save status
     // flickers would drop the caret mid-sentence and restyle the DOM
@@ -165,7 +152,6 @@ export function createEditor({ statusSlot }: EditorOptions): Component<HTMLDivEl
       surface.innerHTML = markdownToDocumentHtml(markdown);
       renderedMarkdown = markdown;
     }
-    renderStatus(statusIcon, statusText, saving, loaded, documentId !== null);
   });
 
   /**
@@ -289,43 +275,18 @@ export function createEditor({ statusSlot }: EditorOptions): Component<HTMLDivEl
       disposeInputRules();
       root.removeEventListener("keydown", onKeyDown);
       toolbar.destroy?.();
+      topBar.destroy?.();
       unsubscribe();
-      statusBar.remove();
     },
   };
-}
-
-function renderStatus(
-  iconHost: HTMLElement,
-  textHost: HTMLElement,
-  saving: boolean,
-  loaded: boolean,
-  hasDocument: boolean,
-): void {
-  iconHost.replaceChildren(iconFor(saving, loaded));
-  textHost.textContent = !loaded
-    ? "Loading…"
-    : !hasDocument
-      ? "No document open"
-      : saving
-        ? "Saving…"
-        : "All changes saved";
-}
-
-function iconFor(saving: boolean, loaded: boolean): Node {
-  const node = createElement(!loaded || saving ? icons.LoaderCircle : icons.Check);
-  node.classList.add("status-svg");
-  if (!loaded || saving) node.classList.add("status-svg--spin");
-  return node;
 }
 
 // No whitespace-pre-wrap: the rendered document is real block markup
 // (p, h1, ul...), so raw newlines between tags must collapse, not show
 // as extra blank lines on top of the CSS margins. Soft breaks typed
 // with Shift+Enter are real <br> elements and still display.
-// Extra bottom padding keeps the last lines clear of the floating toolbar.
-// Top padding stays small: the title-bar spacer above already puts 36px
-// between the window edge and the text.
+// Extra bottom padding keeps the last lines clear of the floating toolbar;
+// the top padding clears the floating top bar the same way.
 const EDITOR_CLASS = [
   "writable-space",
   "flex-1",
@@ -333,7 +294,7 @@ const EDITOR_CLASS = [
   "overflow-y-auto",
   "outline-none",
   "px-10",
-  "pt-4",
+  "pt-16",
   "pb-32",
   "caret-[var(--accent)]",
 ].join(" ");

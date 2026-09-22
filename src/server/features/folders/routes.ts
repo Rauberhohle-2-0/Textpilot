@@ -52,13 +52,22 @@ export function createFolderRoutes({ store, logger }: FolderRoutesOptions): Hono
       | null;
     if (!body) return c.json({ error: "expected body" }, 400);
 
-    const renameTo = typeof body.name === "string" ? body.name.trim().slice(0, 120) : null;
+    // Rename and move are exclusive, as with documents: both at once is
+    // ambiguous, neither is a no-op. Non-string `name` alongside a move
+    // is ignored (it names nothing), but an explicit pair is refused.
+    const wantsRename = typeof body.name === "string";
+    const wantsMove = body.parentId !== undefined;
+    if (wantsRename && wantsMove) {
+      return c.json({ error: "specify either name or parentId, not both" }, 400);
+    }
+    if (!wantsRename && !wantsMove) {
+      return c.json({ error: "nothing to update" }, 400);
+    }
+
+    const renameTo = wantsRename ? (body.name as string).trim().slice(0, 120) : null;
     const parentId = parentIdOf(body.parentId);
     if (parentId === INVALID_ID) {
       return c.json({ error: "parentId must be a string or null" }, 400);
-    }
-    if (renameTo === null && body.parentId === undefined) {
-      return c.json({ error: "nothing to update" }, 400);
     }
 
     try {

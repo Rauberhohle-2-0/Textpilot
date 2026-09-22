@@ -30,24 +30,20 @@ export function boot(root: HTMLElement = document.body): void {
   // over it, macOS source-list style - so the strip only sits over the
   // editor column. The sidebar carries its own drag band inside.
   //
-  // The band is not inert: the save status docks at its right end, and
-  // is `pointer-events: none` so presses still reach the band underneath
-  // it. That keeps the drag region whole while giving a piece of document
-  // state a home in window chrome instead of a footer across the bottom
-  // edge of the window.
+  // The band stays empty on purpose: document state lives in the
+  // floating top bar centered over the editor, so every pixel here
+  // remains a drag surface.
   const shell = h('div', {
     class: 'flex flex-row h-screen w-screen overflow-hidden',
   })
-  // A `div`, not a `header`: the band is window chrome, and a header here
-  // would be a `banner` landmark wrapping nothing but the save status -
-  // which announces itself through its own live region.
+  // A `div`, not a `header`: the band is window chrome with no content.
   const titleBar = h('div', {
     class: 'titlebar-spacer',
     'data-vantail-drag': '',
   })
   const editorColumn = h('div', { class: 'flex-1 min-w-0 flex flex-col editor-column' })
 
-  const editor = createEditor({ statusSlot: titleBar })
+  const editor = createEditor()
   features.push(editor)
   const sidebar = createSidebar({
     onOpenDocument(id) {
