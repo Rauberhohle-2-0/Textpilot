@@ -37,6 +37,23 @@ describe("html to markdown", () => {
   test("a soft line break saves as a plain newline, not trailing spaces", () => {
     expect(documentToMarkdown("<p>first<br>second</p>")).toBe("first\nsecond");
   });
+
+  test("a table saves as GFM pipe syntax", () => {
+    const markdown = documentToMarkdown(
+      "<table><thead><tr><th>a</th><th>b</th></tr></thead>" +
+        '<tbody><tr><td align="right">1</td><td>2</td></tr></tbody></table>',
+    );
+    expect(markdown).toContain("| a | b |");
+    expect(markdown).toContain("| --- | --- |");
+    expect(markdown).toContain("| 1 | 2 |");
+  });
+
+  test("pipe characters inside cells are escaped", () => {
+    const markdown = documentToMarkdown(
+      "<table><thead><tr><th>x</th></tr></thead><tbody><tr><td>a|b</td></tr></tbody></table>",
+    );
+    expect(markdown).toContain("a\\|b");
+  });
 });
 
 describe("markdown to html", () => {
@@ -74,6 +91,23 @@ describe("markdown to html", () => {
     expect(html).not.toContain('href="javascript:');
     expect(html).toContain('href="https://ok.example"');
   });
+
+  test("a pipe table renders as a real table", () => {
+    const html = markdownToDocumentHtml(
+      "| a | b |\n| :--- | ---: |\n| 1 | 2 |\n",
+    );
+    expect(html).toContain("<table>");
+    expect(html).toContain('<th align="left">a</th>');
+    expect(html).toContain('<td align="right">2</td>');
+  });
+
+  test("hostile HTML inside a table cell is stripped", () => {
+    const html = markdownToDocumentHtml(
+      "| a | b |\n| --- | --- |\n| <script>bad()</script>ok | 2 |\n",
+    );
+    expect(html).not.toContain("<script>");
+    expect(html).toContain("<td>ok</td>");
+  });
 });
 
 describe("round-trip", () => {
@@ -89,6 +123,20 @@ describe("round-trip", () => {
     expect(reloaded).toContain("<strong>bold</strong>");
     expect(reloaded).toContain("<em>italic</em>");
     expect(reloaded).toContain("<li>item one</li>");
+  });
+
+  test("a table survives a save/load cycle", () => {
+    const original = markdownToDocumentHtml(
+      "| name | qty |\n| :--- | ---: |\n| screws | 12 |\n| bolts | 4 |\n",
+    );
+    const markdown = documentToMarkdown(original);
+    const reloaded = markdownToDocumentHtml(markdown);
+
+    expect(markdown).toContain("| name | qty |");
+    expect(markdown).toContain("| :--- | ---: |");
+    expect(markdown).toContain("| bolts | 4 |");
+    expect(reloaded).toContain('<td align="left">screws</td>');
+    expect(reloaded).toContain('<td align="right">4</td>');
   });
 });
 

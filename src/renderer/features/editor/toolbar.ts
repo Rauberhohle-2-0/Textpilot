@@ -19,8 +19,9 @@ import {
   activeBlockTag,
   applyFormat,
   isFormatActive,
+  tableHtml,
 } from "./formatting.ts";
-import type { FormatAction } from "./formatting.ts";
+import type { FormatAction, TableSize } from "./formatting.ts";
 
 export interface ToolbarOptions {
   /** The contenteditable the formats apply to. */
@@ -94,6 +95,10 @@ export function createToolbar({
         onChange();
         return;
       }
+      if (action.id === "table") {
+        openTablePicker(button);
+        return;
+      }
       applyFormat(action);
       onChange();
       reflect();
@@ -102,13 +107,111 @@ export function createToolbar({
     return button;
   }
 
+  /**
+   * The size picker: hover the table button and a Word-style grid
+   * opens under it; move across the cells to grow the highlighted
+   * area, click to insert a table of that size at the caret. The
+   * grid tracks the pointer on mousemove (not per-cell hover states),
+   * so sweeping diagonally always lights exactly the cells under the
+   * cursor, and the size label updates in one place.
+   */
+  function openTablePicker(anchor: HTMLButtonElement): void {
+    const MAX = 8;
+    let columns = 0;
+    let rows = 0;
+
+    const grid = h("div", { class: "table-picker-grid" });
+    const cells: HTMLElement[] = [];
+    for (let r = 0; r < MAX; r += 1) {
+      for (let c = 0; c < MAX; c += 1) {
+        const cell = h("div", { class: "table-picker-cell" });
+        cells.push(cell);
+        grid.append(cell);
+      }
+    }
+    const label = h("div", { class: "table-picker-label" }, "1 × 1");
+    const popover = h(
+      "div",
+      { class: "table-picker", role: "dialog", "aria-label": "Insert table" },
+      grid,
+      label,
+    );
+
+    function highlightTo(r: number, c: number): void {
+      columns = c + 1;
+      rows = r + 1;
+      cells.forEach((cell, index) => {
+        cell.classList.toggle("table-picker-cell--lit", index % MAX <= c && Math.floor(index / MAX) <= r);
+      });
+      label.textContent = `${columns} × ${rows}`;
+    }
+
+    grid.addEventListener("mousemove", (event) => {
+      const gridBox = grid.getBoundingClientRect();
+      const c = Math.min(MAX - 1, Math.max(0, Math.floor(((event.clientX - gridBox.left) / gridBox.width) * MAX)));
+      const r = Math.min(MAX - 1, Math.max(0, Math.floor(((event.clientY - gridBox.top) / gridBox.height) * MAX)));
+      highlightTo(r, c);
+    });
+    grid.addEventListener("mousedown", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      insertTableOfSize({ columns, rows });
+      closePicker();
+    });
+    grid.addEventListener("mouseover", () => grid.classList.add("table-picker-grid--active"));
+
+    function closePicker(): void {
+      popover.remove();
+      document.removeEventListener("mousedown", onOutside, true);
+    }
+    function onOutside(event: MouseEvent): void {
+      if (!(event.target as Element | null)?.closest?.(".table-picker")) closePicker();
+    }
+
+    const anchorBox = anchor.getBoundingClientRect();
+    popover.style.left = `${anchorBox.left + anchorBox.width / 2}px`;
+    // Clear of the toolbar pill with room to breathe; the transform
+    // on .table-picker lifts the popover fully above this point.
+    popover.style.top = `${anchorBox.top - 14}px`;
+    document.body.append(popover);
+    document.addEventListener("mousedown", onOutside, true);
+    highlightTo(2, 2); // A 3×3 preview reads as the default.
+  }
+
+  /** Insert the picked table at the caret, rich or source mode alike. */
+  function insertTableOfSize(size: TableSize): void {
+    if (isSourceMode()) {
+      insertMarkdown(source, FORMAT_ACTIONS.find((a) => a.id === "table")!, size);
+      source.focus();
+      onChange();
+      return;
+    }
+    // No execCommand builds a table, so the skeleton goes in as HTML
+    // at the caret. The trailing <p> gives the caret a place below the
+    // table; the caret itself is parked in the first header cell so
+    // typing starts in the table, not after it.
+    document.execCommand("insertHTML", false, tableHtml(size));
+    const first = target.querySelector("table th");
+    if (first) {
+      const range = document.createRange();
+      range.selectNodeContents(first);
+      range.collapse(true);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+    }
+    onChange();
+    reflect();
+  }
+
   function isListOrInline(action: FormatAction): boolean {
     // The list ids (`bullet`, `number`) do not share a suffix, so they
     // are named explicitly - a suffix check is how they once fell out
     // of the toolbar silently.
     return action.kind === "inline" ||
       action.id === "bullet" || action.id === "number" ||
-      action.id === "blockquote" || action.id === "code";
+      action.id === "blockquote" || action.id === "code" ||
+      action.id === "table";
   }
 
   function pascal(icon: string): string {

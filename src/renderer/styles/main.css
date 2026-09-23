@@ -1598,6 +1598,244 @@
     text-underline-offset: 3px;
   }
 
+  /* Tables: GFM pipe tables rendered. Hairline collapsed grid on the
+     shared separator token; the header row sits on the muted surface
+     like `pre`, so both read as 'structural blocks'. Cells inherit the
+     writing face; alignment via the align attribute the sanitizer
+     carries. Full-width only when the content asks for it - tables
+     size to their columns like any prose block. */
+  .writable-space table {
+    margin: 1rem 0 1.2rem;
+    border-collapse: collapse;
+    font-size: 0.95em;
+    line-height: 1.5;
+  }
+
+  .writable-space th,
+  .writable-space td {
+    border: 1px solid var(--separator);
+    padding: 0.4rem 0.8rem;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  /* markdown-it writes align="center" / align="right" for :---: and
+     ---: headers; the attribute cascades to the whole column. */
+  .writable-space th[align="center"],
+  .writable-space td[align="center"] {
+    text-align: center;
+  }
+
+  .writable-space th[align="right"],
+  .writable-space td[align="right"] {
+    text-align: right;
+  }
+
+  .writable-space thead th {
+    background: var(--muted-surface);
+    font-weight: 600;
+  }
+
+  /* Word-style table controls: hover over a table and floating
+     row/column strips appear around it. Same glass recipe as the
+     formatting toolbar, scaled down for small handles. The layer is
+     position:absolute over the editor and does not intercept events
+     except on its own children (pointer-events:none on the container,
+     auto on the strips) - otherwise it would block text selection. */
+  .table-editor-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 15;
+  }
+
+  .table-col-strip,
+  .table-row-strip,
+  .table-menu-button {
+    pointer-events: auto;
+    position: absolute;
+    display: grid;
+    place-items: center;
+  }
+
+  .table-col-strip {
+    cursor: pointer;
+  }
+
+  .table-row-strip {
+    cursor: pointer;
+  }
+
+  /* The handles: small glass squares, lit only when their strip is
+     hovered (via :hover so no extra JS state is needed). */
+  .table-col-handle,
+  .table-row-handle {
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: 1px solid rgb(255 255 255 / 0.14);
+    border-radius: 5px;
+    background: linear-gradient(to bottom, rgb(255 255 255 / 0.1), rgb(255 255 255 / 0.04));
+    color: var(--text-secondary);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 100ms ease;
+  }
+
+  .table-col-handle::after,
+  .table-row-handle::after {
+    content: "";
+    width: 8px;
+    height: 2px;
+    border-radius: 1px;
+    background: currentColor;
+  }
+
+  .table-col-strip:hover .table-col-handle,
+  .table-row-strip:hover .table-row-handle {
+    opacity: 1;
+  }
+
+  .table-menu-button {
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: 1px solid rgb(255 255 255 / 0.14);
+    border-radius: 6px;
+    background: linear-gradient(to bottom, rgb(255 255 255 / 0.1), rgb(255 255 255 / 0.04));
+    color: var(--text-secondary);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 100ms ease;
+  }
+
+  /* The strips live in the layer, which hides when the pointer leaves
+     the table; the menu button gets the same treatment via the layer
+     re-render. It shows whenever its parent button would. */
+  .table-menu-button svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  .table-editor-layer:has(:hover) .table-menu-button,
+  .table-menu-button:hover {
+    opacity: 1;
+  }
+
+  /* The column/row highlight painted on cells during hover. */
+  .writable-space .table-cell--hl {
+    background: var(--accent-bg);
+  }
+
+  .writable-space thead .table-cell--hl {
+    background: var(--accent-bg);
+  }
+
+  /* The operation menu: a compact glass dropdown anchored under the
+     strip that was clicked. Same family as the glass tooltip. */
+  .table-menu {
+    pointer-events: auto;
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    min-width: 150px;
+    padding: 0.3rem;
+    border: 1px solid rgb(255 255 255 / 0.18);
+    border-radius: 0.6rem;
+    background: linear-gradient(to bottom, rgb(40 40 44 / 0.92), rgb(28 28 30 / 0.92));
+    color: #f5f5f7;
+    font-family: ui-sans-serif, -apple-system, system-ui, sans-serif;
+    font-size: 0.75rem;
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.25),
+      0 8px 24px rgb(0 0 0 / 0.3);
+    backdrop-filter: blur(16px) saturate(1.6);
+    -webkit-backdrop-filter: blur(16px) saturate(1.6);
+  }
+
+  .table-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.35rem 0.5rem;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .table-menu-item:hover {
+    background: rgb(255 255 255 / 0.12);
+  }
+
+  .table-menu-item svg {
+    width: 0.85rem;
+    height: 0.85rem;
+    flex: none;
+    opacity: 0.75;
+  }
+
+  /* Destructive ops (delete row/column/table) read as destructive. */
+  .table-menu-item:has(svg.lucide-trash-2, svg.lucide-trash) {
+    color: #ff6961;
+  }
+
+  .table-menu-item:hover:has(svg.lucide-trash-2, svg.lucide-trash) {
+    background: rgb(255 69 58 / 0.18);
+  }
+
+  /* The Word-style size picker: hover the table button and a grid
+     popover opens above the toolbar; sweep across the cells to grow
+     the selection, click to insert. Same glass family as the menus.
+     Anchored by JS (see the toolbar), centered over the button via
+     transform. */
+  .table-picker {
+    position: fixed;
+    z-index: 60;
+    transform: translateX(-50%) translateY(-100%);
+    padding: 0.75rem 0.75rem 0.6rem;
+    border: 1px solid rgb(255 255 255 / 0.18);
+    border-radius: 0.7rem;
+    background: linear-gradient(to bottom, rgb(40 40 44 / 0.92), rgb(28 28 30 / 0.92));
+    color: #f5f5f7;
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.25),
+      0 8px 24px rgb(0 0 0 / 0.3);
+    backdrop-filter: blur(16px) saturate(1.6);
+    -webkit-backdrop-filter: blur(16px) saturate(1.6);
+    font-family: ui-sans-serif, -apple-system, system-ui, sans-serif;
+  }
+
+  .table-picker-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 18px);
+    grid-auto-rows: 18px;
+    gap: 2px;
+  }
+
+  .table-picker-cell {
+    border: 1px solid rgb(255 255 255 / 0.14);
+    border-radius: 3px;
+    background: rgb(255 255 255 / 0.04);
+  }
+
+  .table-picker-cell--lit {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .table-picker-label {
+    margin-top: 0.45rem;
+    text-align: center;
+    font-size: 0.6875rem;
+    font-variant-numeric: tabular-nums;
+    color: rgb(245 245 247 / 0.7);
+  }
+
   .writable-space mark {
     background: var(--mark-bg);
     color: inherit;

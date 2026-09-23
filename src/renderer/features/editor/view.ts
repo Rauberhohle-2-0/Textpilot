@@ -17,6 +17,7 @@ import { documentToMarkdown, markdownToDocumentHtml, looksLikeLegacyHtml } from 
 import { loadDocument, saveDocument } from "../../backend/documents.ts";
 import { createToolbar } from "./toolbar.ts";
 import { installInputRules } from "./input-rules.ts";
+import { installTableEditor } from "./table-editor.ts";
 import { EditorStore } from "./store.ts";
 import { createTopBar } from "../topbar/index.ts";
 
@@ -84,6 +85,10 @@ export function createEditor(_options: EditorOptions = {}): Component<HTMLDivEle
   });
 
   const disposeInputRules = installInputRules({ target: surface, onChange: commitLocalEdit });
+  // Word-style table handles: hover reveals row/column flyouts whose
+  // menus insert/delete rows, columns and whole tables. Mutations go
+  // through the same commit path as any other edit (autosave included).
+  const disposeTableEditor = installTableEditor({ root: surface, onChange: commitLocalEdit });
 
   // The floating top bar: save state + document stats, centered over the
   // document. It subscribes to the store itself, so the editor's own
@@ -273,6 +278,7 @@ export function createEditor(_options: EditorOptions = {}): Component<HTMLDivEle
     destroy() {
       clearTimeout(timer);
       disposeInputRules();
+      disposeTableEditor();
       root.removeEventListener("keydown", onKeyDown);
       toolbar.destroy?.();
       topBar.destroy?.();

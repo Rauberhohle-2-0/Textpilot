@@ -46,6 +46,64 @@ turndown.addRule("strikethrough", {
   replacement: (content) => `~~${content}~~`,
 });
 
+/**
+ * A pipe cell text needs `|` escaped or it would split the cell. The
+ * newline turndown would otherwise keep inside a cell must go too: a
+ * cell is one line of the pipe row, so a soft break becomes a space.
+ */
+function pipeCell(text: string): string {
+  return text.replace(/\|/g, "\\|").replace(/\n/g, " ").trim();
+}
+
+/** The GFM separator row for a header's alignment values. */
+function pipeSeparator(alignment: (string | null)[]): string {
+  return alignment
+    .map((value) => {
+      switch (value) {
+        case "center": return ":---:";
+        case "right": return "---:";
+        case "left": return ":---";
+        default: return "---";
+      }
+    })
+    .join(" | ");
+}
+
+/**
+ * Tables save as GFM pipe syntax, the dialect every markdown reader
+ * understands (and the one markdown-it renders back). Turndown has no
+ * table support at all, so the whole element is walked by hand: the
+ * header row's cells define the columns and every body row pads or
+ * truncates to that width, so the saved pipes always line up.
+ *
+ * Cell content is plain text: a `<br>` inside a cell becomes a space,
+ * and inline markup already reached this rule as text via the inner
+ * rules that ran first. Alignment rides the `align` attribute the
+ * round-trip preserves.
+ */
+turndown.addRule("table", {
+  filter: "table",
+  replacement: (_content, node) => {
+    const table = node as HTMLTableElement;
+    const headerCells = Array.from(table.querySelectorAll("thead th"));
+    const rows = Array.from(table.querySelectorAll("tbody tr"));
+    if (headerCells.length === 0) return ""; // No columns to speak of.
+
+    const header = headerCells.map((cell) => pipeCell(cell.textContent ?? ""));
+    const alignment = headerCells.map((cell) => cell.getAttribute("align"));
+    const lines = [
+      `| ${header.join(" | ")} |`,
+      `| ${pipeSeparator(alignment)} |`,
+      ...rows.map((row) => {
+        const cells = Array.from(row.querySelectorAll("td"));
+        const padded = header.map((_, index) => pipeCell(cells[index]?.textContent ?? ""));
+        return `| ${padded.join(" | ")} |`;
+      }),
+    ];
+    return `\n\n${lines.join("\n")}\n\n`;
+  },
+});
+
 // `breaks` renders a single newline as a visible line break (<br>),
 // matching what the writer sees in the source editor: one Enter = one
 // new line on screen. Without it, two typed lines silently merge into
@@ -58,6 +116,24 @@ turndown.addRule("strikethrough", {
 // still safe: every load passes through the sanitizer allowlist right
 // after this, which strips scripts, handlers and unknown tags.
 const markdownIt = new MarkdownIt({ html: true, linkify: false, breaks: true });
+
+// markdown-it writes column alignment as an inline style
+// (`style="text-align:right"`), which the sanitizer strips - styles
+// are not carried through. The `align` attribute says the same thing,
+// is on the sanitizer allowlist, and is what the turndown table rule
+// reads back, so alignment survives the load/save round-trip.
+for (const tag of ["th_open", "td_open"] as const) {
+  markdownIt.renderer.rules[tag] = (tokens, idx, options, _env, self) => {
+    const token = tokens[idx]!;
+    const attrs: [string, string][] = (token.attrs ?? []) as [string, string][];
+    const style = attrs.find(([name]) => name === "style")?.[1];
+    const match = style ? /text-align:\s*(\w+)/.exec(style) : null;
+    if (match) token.attrSet("align", match[1]!);
+    // The style attribute itself stays; the sanitizer strips it, while
+    // `align` rides the allowlist through to the editor and back out.
+    return self.renderToken(tokens, idx, options);
+  };
+}
 
 /** Editing-surface HTML → the Markdown stored on disk. */
 export function documentToMarkdown(html: string): string {

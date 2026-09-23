@@ -21,11 +21,17 @@ export const ALLOWED_TAGS = [
   "b", "strong", "i", "em", "u", "s", "del", "mark",
   "blockquote", "pre", "code",
   "ul", "ol", "li",
+  "table", "thead", "tbody", "tr", "th", "td",
   "a",
 ] as const;
 
 export const ALLOWED_ATTRIBUTES: Record<string, string[]> = {
   a: ["href", "title"],
+  // markdown-it emits `align` on table cells for `:---:` column
+  // alignment. It is an enumerated attribute, so it carries no script
+  // or style surface.
+  th: ["align"],
+  td: ["align"],
 };
 
 const SANITIZE_OPTIONS: sanitizeHtml.IOptions = {

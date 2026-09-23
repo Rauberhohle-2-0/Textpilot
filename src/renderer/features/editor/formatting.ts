@@ -35,7 +35,37 @@ export const FORMAT_ACTIONS: FormatAction[] = [
   { id: "code", command: "formatBlock", value: "pre", kind: "block", icon: "code", title: "Code block" },
   { id: "bullet", command: "insertUnorderedList", kind: "block", icon: "list", title: "Bullet list" },
   { id: "number", command: "insertOrderedList", kind: "block", icon: "list-ordered", title: "Numbered list" },
+  // No execCommand can build a table; the toolbar special-cases this
+  // id and inserts the table HTML itself (see createToolbar).
+  { id: "table", command: "insertHTML", value: "", kind: "block", icon: "table", title: "Insert table" },
 ];
+
+/**
+ * The skeleton the table action inserts, as HTML for the rich surface
+ * and as markdown for source mode: a header row plus body rows. Empty
+ * header cells keep the table visible while typing into it. The size
+ * comes from the picker (default 3×3 when invoked without one).
+ */
+export interface TableSize {
+  columns: number;
+  rows: number; // body rows; the header comes on top
+}
+
+export function tableHtml({ columns, rows }: TableSize = { columns: 3, rows: 2 }): string {
+  const cell = (tag: string) => `<${tag}></${tag}>`;
+  const header = Array.from({ length: columns }, () => cell("th")).join("");
+  const body = Array.from({ length: rows },
+    () => `<tr>${Array.from({ length: columns }, () => cell("td")).join("")}</tr>`).join("");
+  return `<table><thead><tr>${header}</tr></thead><tbody>${body}</tbody></table><p><br></p>`;
+}
+
+export function tableMarkdown({ columns, rows }: TableSize = { columns: 3, rows: 2 }): string {
+  const header = Array.from({ length: columns }, () => "Header").join(" | ");
+  const separator = Array.from({ length: columns }, () => "---").join(" | ");
+  const emptyRow = Array.from({ length: columns }, () => " ").join(" | ");
+  const body = Array.from({ length: rows }, () => `| ${emptyRow} |`).join("\n");
+  return `\n| ${header} |\n| ${separator} |\n${body}\n`;
+}
 
 /** The commands whose active state is queried on selection change. */
 export const STATE_COMMANDS = [

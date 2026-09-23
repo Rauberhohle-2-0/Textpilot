@@ -14,7 +14,8 @@
  *   selection touches, and toggle the prefix off when it is already
  *   there.
  */
-import type { FormatAction } from "./formatting.ts";
+import type { FormatAction, TableSize } from "./formatting.ts";
+import { tableMarkdown } from "./formatting.ts";
 
 /** Inline marker pair for an action, when it has one. */
 function inlineMarkers(action: FormatAction): { open: string; close: string } | undefined {
@@ -32,9 +33,16 @@ function inlineMarkers(action: FormatAction): { open: string; close: string } | 
 
 const LINE_PREFIXES = /^(#{1,3}\s+|>\s+|[-*]\s+|\d+\.\s+)/;
 
-export function insertMarkdown(textarea: HTMLTextAreaElement, action: FormatAction): void {
+export function insertMarkdown(textarea: HTMLTextAreaElement, action: FormatAction, tableSize?: TableSize): void {
   if (action.id === "code" && hasMultilineSelection(textarea)) {
     wrapBlock(textarea, "```", "```");
+    return;
+  }
+
+  // A table is a block skeleton, not a wrapper: it goes in at the caret
+  // whichever way the selection sits, like the rich surface does.
+  if (action.id === "table") {
+    insertBlock(textarea, tableMarkdown(tableSize));
     return;
   }
 
@@ -67,6 +75,21 @@ function wrapInline(textarea: HTMLTextAreaElement, open: string, close: string):
   textarea.setRangeText(`${open}${close}`, selectionStart, selectionEnd);
   textarea.selectionStart = selectionStart + open.length;
   textarea.selectionEnd = selectionStart + open.length;
+}
+
+/**
+ * Insert a block-level skeleton at the caret, on its own lines. A
+ * leading newline is added unless the caret already starts a line, so
+ * the block never glues itself to the tail of the previous line. The
+ * caret lands at the start of the inserted text, ready to overwrite
+ * the skeleton.
+ */
+function insertBlock(textarea: HTMLTextAreaElement, block: string): void {
+  const { selectionStart, value } = textarea;
+  const atLineStart = selectionStart === 0 || value[selectionStart - 1] === "\n";
+  const prefix = atLineStart ? "" : "\n";
+  textarea.setRangeText(`${prefix}${block}`, selectionStart, textarea.selectionEnd, "end");
+  textarea.selectionStart = selectionStart + prefix.length;
 }
 
 function wrapBlock(textarea: HTMLTextAreaElement, open: string, close: string): void {
