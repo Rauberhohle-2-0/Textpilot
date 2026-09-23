@@ -274,6 +274,13 @@
     -webkit-font-smoothing: antialiased;
   }
 
+  /* The zero-size SVG filter host in index.html, positioned from the
+     stylesheet so the CSP's style-src can stay 'self' - no inline
+     style attributes anywhere in the document. */
+  .glass-filter-host {
+    position: absolute;
+  }
+
   /* Native text selection, like any macOS text view. */
   ::selection {
     background: var(--selection-bg);

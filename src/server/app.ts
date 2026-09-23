@@ -87,8 +87,10 @@ export function createApp({ logger, libraryRoot, greeting = true }: CreateAppOpt
       contentSecurityPolicy: {
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'"],
-        // Tailwind injects its styles at runtime.
-        styleSrc: ["'self'", "'unsafe-inline'"],
+        // Tailwind compiles to a real stylesheet at build time, so no
+        // style-src exceptions are needed in production. (Dev is served
+        // by Vite, whose own relaxations never pass through here.)
+        styleSrc: ["'self'"],
         imgSrc: ["'self'", "data:"],
         connectSrc: ["'self'"],
         objectSrc: ["'none'"],

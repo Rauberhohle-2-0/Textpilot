@@ -6,13 +6,15 @@
     <meta name="color-scheme" content="light dark" />
     <!-- Defence in depth behind the markdown sanitizer: even if a
          payload survived the allowlist it could not load a script or
-         send data anywhere. `unsafe-inline` styles are Tailwind's
-         runtime injection; connect-src stays on loopback because that
-         is the only network this app may touch (vantail.config.ts) and
-         the dev server's HMR socket lives there too. -->
+         send data anywhere. Styles stay 'self': Tailwind compiles to a
+         real stylesheet at build time, and the one inline style lives
+         in main.css (loaded like any other stylesheet). connect-src
+         stays on loopback because that is the only network this app
+         may touch (vantail.config.ts) and the dev server's HMR socket
+         lives there too. -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:*; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:*; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'"
     />
     <title>Textpilot</title>
     <script type="module" src="/main.ts"></script>
@@ -25,7 +27,7 @@
        it for renderers without SVG-in-backdrop support). Kept in the
        DOM with zero size rather than display:none, which would break
        the reference in some renderers. -->
-    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+    <svg width="0" height="0" class="glass-filter-host" aria-hidden="true">
       <defs>
         <filter
           id="textpilot-glass"

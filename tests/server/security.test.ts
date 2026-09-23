@@ -1,9 +1,11 @@
-import { describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createApp } from "../../src/server/app.ts";
 import { MAX_DOCUMENT_BYTES } from "../../src/shared/documents.ts";
+import { apiToken, resetApiTokenThrottle } from "../../src/server/middleware/local-only.ts";
+import { Hono } from "hono";
 
 const JSON_HEADERS = { "content-type": "application/json" };
 
@@ -84,5 +86,71 @@ describe("request guards", () => {
     const app = createApp({ libraryRoot });
     expect((await app.request("/api/health")).status).toBe(200);
     expect((await app.request("/api/documents")).status).toBe(200);
+  });
+
+  test("a host header with a malformed port is foreign, not loopback", async () => {
+    // URL-based parsing validates the port too: a header like this must
+    // not pass because its hostname part happens to read as loopback.
+    const app = createApp({ libraryRoot });
+    const res = await app.request("/api/documents", {
+      headers: { host: "127.0.0.1:not-a-port" },
+    });
+    expect(res.status).toBe(403);
+  });
+
+  test("an IPv6 loopback host is accepted", async () => {
+    const app = createApp({ libraryRoot });
+    const res = await app.request("/api/health", {
+      headers: { host: "[::1]:4000" },
+    });
+    expect(res.status).toBe(200);
+  });
+});
+
+describe("bearer token throttle", () => {
+  const APP = new Hono();
+  APP.use("/api/*", apiToken());
+  APP.get("/api/health", (c) => c.json({ ok: true }));
+
+  const attempt = (token: string) =>
+    APP.request("/api/health", { headers: { authorization: `Bearer ${token}` } });
+
+  beforeEach(() => resetApiTokenThrottle());
+
+  test("repeated failures lock the endpoint even for a correct token", async () => {
+    process.env.TEXTPILOT_TOKEN = "secret";
+    try {
+      for (let i = 0; i < 10; i += 1) {
+        expect((await attempt("wrong")).status).toBe(401);
+      }
+      // Locked: even the right token is refused now.
+      expect((await attempt("secret")).status).toBe(429);
+      // And an unauthenticated request too - the lockout is not a bypass.
+      expect((await APP.request("/api/health")).status).toBe(429);
+    } finally {
+      delete process.env.TEXTPILOT_TOKEN;
+    }
+  });
+
+  test("a success clears the failure count", async () => {
+    process.env.TEXTPILOT_TOKEN = "secret";
+    try {
+      for (let i = 0; i < 9; i += 1) {
+        expect((await attempt("wrong")).status).toBe(401);
+      }
+      expect((await attempt("secret")).status).toBe(200);
+      // The counter reset: nine more failures do not lock.
+      for (let i = 0; i < 9; i += 1) {
+        expect((await attempt("wrong")).status).toBe(401);
+      }
+      expect((await attempt("secret")).status).toBe(200);
+    } finally {
+      delete process.env.TEXTPILOT_TOKEN;
+    }
+  });
+
+  test("no token configured means no throttle and no auth", async () => {
+    delete process.env.TEXTPILOT_TOKEN;
+    expect((await APP.request("/api/health")).status).toBe(200);
   });
 });

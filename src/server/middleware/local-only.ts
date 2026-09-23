@@ -22,7 +22,8 @@
  *   additionally requires `Authorization: Bearer <token>`; the bundled
  *   renderer sends it from the `textpilot-api-token` meta tag when one
  *   is present. Unset (the default for tests and plain `dev` runs)
- *   means no token is required.
+ *   means no token is required. Failed attempts are throttled, so the
+ *   token cannot be guessed at line speed.
  *
  * The guards overlap on purpose, and none of them trusts a header it did
  * not need to: a request that declares nothing is a local client, not a
@@ -34,11 +35,23 @@ import type { MiddlewareHandler } from "hono";
 /** Hostnames that mean "this machine". Ports are ignored. */
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]", "::1"]);
 
-/** The hostname part of a `Host` header: `127.0.0.1:3000` → `127.0.0.1`. */
+/**
+ * The hostname part of a `Host` header: `127.0.0.1:3000` → `127.0.0.1`.
+ *
+ * Parsed with `URL` rather than a hand-rolled regex, so the port is
+ * validated too: a header like `127.0.0.1:not-a-port` fails to parse
+ * and is treated as foreign instead of trusting the part before the
+ * colon. IPv6 arrives as `::1` (`URL.hostname` strips the brackets);
+ * the loopback set holds both spellings for safety. An unparseable
+ * header yields the empty string, which no loopback name matches.
+ */
 function hostnameOf(header: string | undefined): string | null {
   if (header === undefined) return null;
-  const match = /^\s*(\[[^\]]*\]|[^:]*)/.exec(header);
-  return (match?.[1] ?? "").toLowerCase();
+  try {
+    return new URL(`http://${header}`).hostname.toLowerCase();
+  } catch {
+    return ""; // Malformed host: not a loopback name, so not our own.
+  }
 }
 
 export function localOnly(): MiddlewareHandler {
@@ -99,10 +112,32 @@ export function jsonOnly(): MiddlewareHandler {
 }
 
 /**
+ * Throttle for failed bearer-token attempts. The threat is a local
+ * process brute-forcing `TEXTPILOT_TOKEN` at line speed; a fixed
+ * failure count followed by a lockout bounds the guess rate without
+ * any state beyond two module variables. Module-level on purpose: the
+ * throttle is per-process, like the server it guards.
+ */
+const MAX_TOKEN_FAILURES = 10;
+const TOKEN_LOCKOUT_MS = 60_000;
+
+let tokenFailures = 0;
+let tokenLockedUntil = 0;
+
+/** Clear the throttle state; tests use this between cases. */
+export function resetApiTokenThrottle(): void {
+  tokenFailures = 0;
+  tokenLockedUntil = 0;
+}
+
+/**
  * Opt-in bearer token for `/api/*`. Disabled when `TEXTPILOT_TOKEN` is
  * unset or empty, so tests and plain dev runs behave as before. When
- * set, the comparison is constant-time and the failure is a 401 without
- * a `WWW-Authenticate` challenge (no browser login prompt wanted).
+ * set, the comparison is constant-time and repeated failures lock the
+ * endpoint for a window - even a correct token is refused with 429
+ * during a lockout, which is what makes guessing expensive. The failure
+ * is otherwise a 401 without a `WWW-Authenticate` challenge (no browser
+ * login prompt wanted).
  */
 export function apiToken(): MiddlewareHandler {
   return async (c, next) => {
@@ -111,11 +146,19 @@ export function apiToken(): MiddlewareHandler {
       await next();
       return;
     }
+    if (Date.now() < tokenLockedUntil) {
+      return c.json({ error: "too many failed attempts; try again later" }, 429);
+    }
     const header = c.req.header("authorization") ?? "";
     const match = /^Bearer (.+)$/.exec(header);
     if (match && safeEqual(match[1]!, expected)) {
+      tokenFailures = 0;
       await next();
       return;
+    }
+    tokenFailures += 1;
+    if (tokenFailures >= MAX_TOKEN_FAILURES) {
+      tokenLockedUntil = Date.now() + TOKEN_LOCKOUT_MS;
     }
     return c.json({ error: "unauthorized" }, 401);
   };
